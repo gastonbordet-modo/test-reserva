@@ -12,15 +12,13 @@ import {
   SPORT_LABELS,
   type FilterId,
 } from "../context/SearchContext";
+import { formatPrice } from "../lib/format";
 import { SearchBar } from "./SearchBar";
 import { FilterPill } from "./FilterPill";
 import { LocationFilter } from "./filters/LocationFilter";
 import { PeopleFilter } from "./filters/PeopleFilter";
 import { PriceFilter } from "./filters/PriceFilter";
-
-function formatPrice(n: number): string {
-  return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-}
+import { VenueList } from "./VenueList";
 
 export function SearchExperience() {
   const {
@@ -153,6 +151,8 @@ export function SearchExperience() {
             </div>
           )}
         </div>
+
+        {submitted && <VenueList />}
       </div>
     </div>
   );
