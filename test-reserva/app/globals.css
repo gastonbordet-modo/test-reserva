@@ -1,26 +1,131 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@theme {
+  /* === Brand: Greens === */
+  --color-brand: #008859;
+  --color-brand-dark: #00471b;
+  --color-brand-light: #def8e9;
+  --color-brand-80: #33a07a;
+  --color-brand-60: #66b89b;
+  --color-brand-40: #99cfbd;
+  --color-brand-20: #cce7de;
+  --color-brand-10: #e5f3ee;
+  --color-brand-05: #f2f9f7;
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  --color-green: #008859;
+  --color-green-light: #3cab6d;
+  --color-green-dark: #00471b;
+  --color-green-80: #58ca8a;
+  --color-green-60: #7de3aa;
+  --color-green-40: #a0e7bf;
+  --color-green-20: #c8f0da;
+  --color-green-10: #dcf5e7;
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  /* === Accent: Blues === */
+  --color-accent: #0049c4;
+  --color-blue: #0049c4;
+  --color-blue-light: #2375ff;
+  --color-blue-dark: #0d3f92;
+  --color-blue-80: #336dd0;
+  --color-blue-60: #6692dc;
+  --color-blue-40: #99b6e7;
+  --color-blue-20: #ccdbf3;
+  --color-blue-10: #e5edf9;
+  --color-blue-cross-light: #96abcb;
+  --color-blue-cross-dark: #092042;
+
+  /* === Yellows === */
+  --color-yellow: #ffc738;
+  --color-yellow-dark: #e7a600;
+  --color-yellow-light: #fff8e5;
+
+  /* === Oranges === */
+  --color-orange-light: #ffa985;
+  --color-orange-dark: #ff5524;
+
+  /* === Neutrals === */
+  --color-ink: #121212;
+  --color-paper: #ffffff;
+  --color-black-cross: #121213;
+  --color-gray-80: #414141;
+  --color-gray-60: #717171;
+  --color-gray-40: #929292;
+  --color-gray-20: #d0d0d0;
+  --color-gray-08: #ececec;
+  --color-gray-03: #f8f8f8;
+
+  /* === System === */
+  --color-system-link: #0669fd;
+  --color-system-success: #008857;
+  --color-system-success-light: #e5f3ef;
+  --color-system-warning: #e18c0a;
+  --color-system-warning-light: #fff2df;
+  --color-system-error: #da1948;
+  --color-system-error-light: #ffecf2;
+
+  /* === Surfaces === */
+  --color-bg-light: #ffffff;
+  --color-bg-dark: #00471b;
+  --color-bg-home: #fafbfb;
+  --color-bg-home-section: #ffffff;
+  --color-bg-promo: #ffc738;
+  --color-bg-success: #008859;
+  --color-bg-check: #008859;
+  --color-bg-check-opacity: #3cab6d;
+  --color-bg-container: #12121233;
+
+  /* === Text === */
+  --color-text-light: #121212;
+  --color-text-gray: #717171;
+  --color-text-dark: #ffffff;
+  --color-text-button: #ffffff;
+  --color-text-home: #121212;
+  --color-text-success: #ffffff;
+  --color-text-accent-success: #ffffff;
+  --color-text-gray-success: #ffffff66;
+
+  --color-stroke-success: #ffffff66;
+  --color-button-success: #12121233;
+  --color-button-dark-success: #12121259;
+  --color-check-success: #ffffff;
+
+  /* === Opacity tokens === */
+  --color-white-80: #ffffffcc;
+  --color-white-70: #ffffffb2;
+  --color-white-40: #ffffff66;
+  --color-white-30: #ffffff4c;
+  --color-white-12: #ffffff1f;
+  --color-white-02: #ffffff05;
+  --color-white-00: #ffffff00;
+  --color-black-80: #121212cc;
+  --color-black-55: #1212128c;
+  --color-black-35: #12121259;
+  --color-black-20: #12121233;
+  --color-black-05: #1212120d;
+  --color-black-02: #12121205;
+  --color-gray-soft-02: #f5f5f50d;
+  --color-gray-soft-05: #1212120d;
+  --color-gray-soft-94: #f4f4f4f0;
+  --color-yellow-soft-20: #ffc73833;
+
+  /* === Radius === */
+  --radius-modo-sm: 12px;
+  --radius-modo-md: 18px;
+  --radius-modo-lg: 20px;
+  --radius-modo-xl: 24px;
+  --radius-modo-button: 20px;
+
+  /* === Shadow === */
+  --shadow-modo: 0 0 10px 0 #1212120d;
+
+  /* === Fonts === */
+  --font-sans: var(--font-red-hat-display), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-red-hat-display), ui-sans-serif, system-ui,
+    sans-serif;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-bg-home);
+  color: var(--color-text-home);
+  font-family: var(--font-sans);
 }
