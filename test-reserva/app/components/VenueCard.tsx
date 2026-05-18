@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 import type { Venue } from "../services/venues";
 import { formatPrice } from "../lib/format";
 
@@ -8,9 +9,9 @@ type Props = {
 
 export function VenueCard({ venue }: Props) {
   return (
-    <button
-      type="button"
-      className="cursor-pointer flex gap-4 p-3 bg-paper border border-gray-20 rounded-modo-md shadow-modo hover:border-brand transition-colors text-left w-full"
+    <Link
+      href={`/venues/${venue.id}`}
+      className="cursor-pointer flex gap-4 p-3 bg-paper border border-gray-20 rounded-modo-md shadow-modo hover:border-brand transition-all active:scale-[0.98] active:bg-brand-05 w-full"
     >
       <Image
         src={venue.imageUrl}
@@ -26,6 +27,6 @@ export function VenueCard({ venue }: Props) {
           ${formatPrice(venue.price)}
         </p>
       </div>
-    </button>
+    </Link>
   );
 }
