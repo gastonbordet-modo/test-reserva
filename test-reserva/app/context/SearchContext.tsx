@@ -33,6 +33,12 @@ type SearchContextValue = {
   date: string;
   setDate: (v: string) => void;
   appliedFilters: Set<FilterId>;
+  applyParsedFilters: (p: {
+    sport?: Sport | null;
+    date?: string | null;
+    location?: string | null;
+    maxPrice?: number | null;
+  }) => void;
 };
 
 const SearchContext = createContext<SearchContextValue | null>(null);
@@ -87,6 +93,37 @@ export function SearchProvider({ children }: { children: ReactNode }) {
     setApplied("date", value.length > 0);
   }
 
+  function applyParsedFilters(p: {
+    sport?: Sport | null;
+    date?: string | null;
+    location?: string | null;
+    maxPrice?: number | null;
+  }) {
+    if (p.sport !== undefined && p.sport !== null) {
+      setSport(p.sport);
+    }
+    const touchedFilters: FilterId[] = [];
+    if (p.date !== undefined && p.date !== null) {
+      setDateRaw(p.date);
+      touchedFilters.push("date");
+    }
+    if (p.location !== undefined && p.location !== null) {
+      setLocationRaw(p.location);
+      touchedFilters.push("location");
+    }
+    if (p.maxPrice !== undefined && p.maxPrice !== null) {
+      setMaxPriceRaw(p.maxPrice);
+      touchedFilters.push("price");
+    }
+    if (touchedFilters.length > 0) {
+      setAppliedFilters((prev) => {
+        const next = new Set(prev);
+        for (const id of touchedFilters) next.add(id);
+        return next;
+      });
+    }
+  }
+
   return (
     <SearchContext.Provider
       value={{
@@ -103,6 +140,7 @@ export function SearchProvider({ children }: { children: ReactNode }) {
         date,
         setDate,
         appliedFilters,
+        applyParsedFilters,
       }}
     >
       {children}

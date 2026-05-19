@@ -30,6 +30,10 @@ app/
     venues.ts                 fetchVenues, getVenueById (mockeado)
     slots.ts                  fetchSlots (mockeado, devuelve Court[])
     bookings.ts               createBooking, fetchUserBookings (mockeado)
+    parseSearch.ts            parseSearchQuery (cliente del route handler)
+  api/
+    parse-search/
+      route.ts                POST: infiere filtros del texto vía Claude (server-only)
   hooks/
     useVenues.ts              Refetch automático al cambiar filtros
   lib/
@@ -37,7 +41,7 @@ app/
     auth.ts                   getAuthToken (lee sessionStorage, auto-seed mock)
   components/
     SearchExperience.tsx      Orquestador del home (input + pills + lista)
-    SearchBar.tsx             Input + submit + detectSport
+    SearchBar.tsx             Input + submit async (Claude parser) + fallback detectSport
     FilterPill.tsx            Pill genérico (3 estados visuales)
     NumberStepper.tsx         Stepper reusable
     VenueList.tsx             Renderiza loading/empty/list
@@ -73,6 +77,8 @@ Provider en root layout. Mantiene:
 - `appliedFilters: Set<FilterId>` — qué filtros muestran estilo "aplicado" (con check). Se siembra con `["location", "price"]` en el initial state y se le agrega `"date"` en el `useEffect` de mount (junto con el seteo de `todayIso()`). Resultado: el usuario ve el home con los tres filtros con defaults ya marcados como aplicados, igual que si los hubiera ingresado a mano.
 
 **Patrón de setters envueltos**: `setLocation`, `setMaxPrice`, `setDate` actualizan automáticamente `appliedFilters`. El componente nunca tiene que mantener "está aplicado o no" por su cuenta.
+
+**`applyParsedFilters({ sport?, date?, location?, maxPrice? })`**: setter batch usado por el `SearchBar` al recibir la respuesta del parser LLM. Solo aplica los campos no-null (los campos `null`/`undefined` se ignoran → preservan el valor previo, que es el default si nunca se tocó). Marca cada campo tocado como aplicado en una sola transición de `appliedFilters` para evitar renders intermedios.
 
 ### Hidratación
 
@@ -116,6 +122,17 @@ El bridge real de MODO va a inyectar un JWT en `sessionStorage["modo_auth_token"
   - `fetchUserBookings()`: devuelve todas las reservas del store ordenadas por fecha desc. También llama `getAuthToken()`.
   - `cancelBooking(bookingId)`: soft-delete (muta `status` a `"cancelled"` en el store, no remueve el registro). Devuelve el booking actualizado o throwa si no existe. Token por header (mismo patrón).
 
+### Inferencia de filtros (Claude)
+
+El `SearchBar` no parsea el texto a mano; delega en un route handler `POST /api/parse-search` que llama a Claude (Haiku 4.5) para inferir los 4 filtros (`sport`, `date`, `location`, `maxPrice`) en una sola pasada, tolerando typos y fechas relativas en español rioplatense.
+
+- **`app/api/parse-search/route.ts`** (server-only): valida el input con Zod (`query` ≤ 200 chars, `today` ISO), llama `generateObject` del Vercel AI SDK con `@ai-sdk/anthropic` directo (sin Gateway, sin coupling con Vercel). `temperature: 0`. El system prompt fija el contrato: 4 campos siempre presentes en el output, `null` cuando el campo no aparece en el texto, conversión de fechas relativas usando `today` como ancla, "lucas" → miles. Cualquier error (Anthropic caído, JSON malformado, body inválido) devuelve 200 con todos los campos en `null` (degradación graceful).
+- **`app/services/parseSearch.ts`** (cliente): `parseSearchQuery(query, today)` postea al route, sanitiza la respuesta contra un whitelist (sport enum, regex ISO en date, número finito positivo en maxPrice) y devuelve `ParsedFilters`. En cualquier fallo de red/parsing también devuelve todo `null`.
+- **`SearchBar`**: al submit, llama `parseSearchQuery`. Si `sport` viene `null`, cae al `detectSport()` regex local como red de seguridad. Si tampoco detecta, muestra el error de "deporte no identificado" (igual que antes del LLM). Si hay deporte, llama `applyParsedFilters` y deja al provider decidir qué pills marcar aplicadas.
+- **Key**: `ANTHROPIC_API_KEY` en `.env` (o `.env.local` para no commitearla). El provider de `@ai-sdk/anthropic` la lee automático; nunca se pasa a la URL ni al cliente.
+
+Los campos que no vinieron del LLM mantienen el default actual del context (`date = hoy`, `location = "CABA"`, `maxPrice = 5000`).
+
 ### Modal de confirmación genérico
 
 `ConfirmBookingModal` se usa tanto para confirmar como para cancelar. Props relevantes para variar el comportamiento: `title`, `description`, `actionLabel`, `submittingLabel`, `actionVariant: "primary" | "destructive"`, `showDepositBadge`. El tipo de slots aceptado es un shape mínimo (`{ id, startTime, endTime, price }`) compatible con `Slot` (servicios) y `BookingSlot` (reservas).
@@ -125,6 +142,7 @@ El bridge real de MODO va a inyectar un JWT en `sessionStorage["modo_auth_token"
 | Ruta | Tipo | Notas |
 |---|---|---|
 | `/` | Client (vía `SearchExperience`) | Home con search + lista |
+| `POST /api/parse-search` | Route Handler server | Recibe `{ query, today }`, llama Claude vía AI SDK, devuelve los 4 filtros (nullables) |
 | `/venues/[venueId]` | Server | `params: Promise<...>` (async), fetchea data y pasa a `<SlotBookingPanel />` |
 | `/mis-reservas` | Server shell | Lee `searchParams.confirmed`, pasa `justConfirmed` a `<BookingsList />` client. `BookingsList` fetchea bookings en mount, separa Próximas/Pasadas, dispara snackbar si viene de un confirm y limpia la URL con `router.replace`. |
 
@@ -157,3 +175,5 @@ Animaciones custom: `filter-panel-enter` para los panels que se montan al abrir 
 - **Server-side hold** con expiración a 5min y liberación on-timeout.
 - **Reembolso real vía MODO** post-cancelación. Hoy `cancelBooking` solo actualiza el status; en producción tiene que disparar el bridge de MODO para reembolsar el pago.
 - **Contador en tabs de reservas** (`Próximas (3)` / `Pasadas (7)`).
+- **Rate limiting del parser** (`/api/parse-search`): hoy expuesto sin control. Antes de prod, limit por IP o por token MODO + budget alert en Anthropic console.
+- **Feedback visible de inferencia**: línea bajo el input tipo "Detectado: Fútbol · Mañana · Palermo · hasta $4000" para que el usuario entienda qué filtros se autocompletaron. Hoy se ve solo a través del cambio de los pills.

@@ -63,7 +63,10 @@ Hoy reservar una cancha implica coordinar por WhatsApp con cada club: chequear d
 ### RF-1 Buscador
 
 - Input de texto libre.
-- Autodetección de deporte por normalización (`fútbol`/`futbol`, `paddle`/`padel`, `basquet`/`basket`, `tenis`).
+- Al submit, el texto se manda a un parser LLM (Claude Haiku 4.5 vía `POST /api/parse-search`) que infiere en una sola pasada los 4 filtros relevantes: **deporte**, **fecha**, **ubicación** y **precio máximo**.
+- Tolerancia a typos y fechas relativas en español rioplatense ("futvol palerno mañana hasta 4 lucas" → `futbol` / `<mañana ISO>` / `Palermo` / `4000`).
+- Los filtros inferidos se aplican automáticamente al `SearchContext` (los pills aparecen marcados con el nuevo valor). Los campos que el LLM no pudo inferir quedan con su default del context (`date = hoy`, `location = "CABA"`, `maxPrice = 5000`).
+- Fallback: si el LLM falla, está caído o no detecta el deporte, se cae a un detector regex local (`fútbol`/`futbol`, `paddle`/`padel`, `basquet`/`basket`, `tenis`). Si tampoco detecta, error visible "No identificamos el deporte".
 - 4 deportes soportados en v1.
 
 ### RF-2 Filtros
