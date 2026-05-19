@@ -24,30 +24,32 @@ app/
     SearchContext.tsx         Filtros + deporte detectado (estado global)
     SnackbarContext.tsx       Provider global de snackbars (success/error)
   data/
-    venues.ts                 Mock data fuente (MockVenue + MOCK_VENUES + minCourtPrice)
-    bookings.ts               Seed estático + store in-memory de reservas
+    bookings.ts               Seed estático + store in-memory de reservas (mock pendiente)
   services/
-    venues.ts                 fetchVenues, getVenueById (mockeado)
-    slots.ts                  fetchSlots (mockeado, devuelve Court[])
-    bookings.ts               createBooking, fetchUserBookings (mockeado)
+    venues.ts                 fetchVenues, getVenueById (Supabase real). Venue = cancha; trae merchant embebido
+    merchants.ts              fetchMerchants (Supabase real). Deriva imageUrl por slug
+    slots.ts                  fetchSlots (Supabase real); flat Slot[] con venue embebido
+    bookings.ts               createReservations (real); fetchUserBookings/cancelBooking (mock, pendientes)
     parseSearch.ts            parseSearchQuery (cliente del route handler)
   api/
     parse-search/
       route.ts                POST: infiere filtros del texto vía Claude (server-only)
   hooks/
-    useVenues.ts              Refetch automático al cambiar filtros
+    useMerchants.ts           Fetch list-venues + agrupa por merchant client-side
   lib/
+    api.ts                    apiFetch + ApiError + snakeCase params (cliente Supabase Edge)
     format.ts                 formatPrice, formatDateLabel, todayIso, addDays
-    auth.ts                   getAuthToken (lee sessionStorage, auto-seed mock)
+    auth.ts                   getUserId (lee sessionStorage, auto-seed mock 'landing-demo-001')
   components/
     SearchExperience.tsx      Orquestador del home (input + pills + lista)
     SearchBar.tsx             Input + submit async (Claude parser) + fallback detectSport
     FilterPill.tsx            Pill genérico (3 estados visuales)
     NumberStepper.tsx         Stepper reusable
-    VenueList.tsx             Renderiza loading/empty/list
-    VenueCard.tsx             Link a /venues/[id]
-    SlotBookingPanel.tsx      Multi-select + CTA fijo + modal de confirmación
+    MerchantList.tsx          Renderiza loading/empty/list de complejos
+    MerchantCard.tsx          Card de complejo (link a /merchants/[id]?sport=X)
+    SlotBookingPanel.tsx      Tabs por cancha + N fetchSlots paralelos + CTA fijo + modal
     SlotCard.tsx              Card individual de slot
+    CourtTabs.tsx             Tabs horizontales por cancha (Venue[])
     ConfirmBookingModal.tsx   Bottom sheet de confirmación de reserva
     BookingsList.tsx          Tabs Próximas/Pasadas + fetch en mount
     BookingCard.tsx           Card individual de reserva con variants
@@ -55,9 +57,9 @@ app/
       LocationFilter.tsx
       PriceFilter.tsx
       DateFilter.tsx
-  venues/
-    [venueId]/
-      page.tsx                Server component: fetch + <SlotBookingPanel />
+  merchants/
+    [merchantId]/
+      page.tsx                Server component: fetchVenues filtrado por merchant + <SlotBookingPanel />
   mis-reservas/
     page.tsx                  Server shell; reads `?confirmed=1` y delega a BookingsList
 ```
@@ -90,37 +92,73 @@ Todo el código de formato (`formatPrice`, `formatDateLabel`) es determinístico
 
 ### `data/`
 
-Fuente mock de datos compartida entre servicios. `MockVenue` extiende `Venue` con campos privados (`sport`, `hasDeposit`, `slotDurationMinutes`) que no se exponen al cliente; los servicios los stripean con `toPublicVenue`.
+Solo queda `bookings.ts` con el store in-memory de reservas mock (pendiente migración a `list-user-reservations`). Los mocks de venues/slots se borraron al integrar el backend real.
 
 ### `services/`
 
-Cada función define el **contrato que el backend real va a respetar**. Hoy están mockeadas con `setTimeout` (100–300ms) para que el código consumidor ya esté escrito asumiendo async.
+Cada función habla con Supabase Edge Functions vía `apiFetch` (excepto las funciones aún mockeadas).
 
-- `fetchVenues(params): Promise<Venue[]>` — filtra por sport, location, maxPrice y deposit; ordena por precio.
-- `getVenueById(id): Promise<Venue | null>`
-- `fetchSlots(venueId): Promise<Slot[]>` — genera slots 08:00–22:00 a partir de `slotDurationMinutes` del venue.
+- `fetchMerchants({ sport?, withDeposit? }): Promise<Merchant[]>` — `GET /list-merchants`. Ordena por `minPrice` asc. El service deriva `imageUrl` por slug.
+- `fetchVenues(params): Promise<Venue[]>` — `GET /list-venues`. Filtra por sport (req), location, maxPrice, withDeposit. Devuelve canchas con `merchant` embebido.
+- `getVenueById(id): Promise<Venue | null>` — `GET /get-venue?id=`. 404 → `null`.
+- `fetchSlots(venueId, date?): Promise<Slot[]>` — `GET /list-slots?venue_id&date?`. Devuelve flat array; cada slot trae `venue` embebido (redundante con el listado pero útil).
+- `createReservations({ slotIds }): Promise<Reservation[]>` — `POST /create-reservations-bulk`.
 
-### `hooks/useVenues`
+### `hooks/useMerchants`
 
-Wraps fetch + estado. Patrón `cancelled` flag dentro del effect para evitar race conditions cuando el usuario cambia filtros rápido. Refetchea ante cambio de cualquier filtro (dep array exhaustivo).
+Wrappea `fetchMerchants` + post-filter client-side de `location` (substring sobre `address`) y `maxPrice` (contra `minPrice` de cada merchant). Patrón `cancelled` flag dentro del effect para evitar race conditions cuando el usuario cambia filtros rápido. Refetchea ante cambio de cualquier filtro (dep array exhaustivo).
+
+### Modelo de datos y flujo de navegación
+
+Backend modela 3 niveles que el FE refleja 1-a-1:
+
+- **Merchant** = complejo (ej. "Polideportivo Norte"). Tiene N venues. Datos: nombre, dirección, contactos, `requiresDeposit`.
+- **Venue** = cancha individual (ej. "Paddle #4"). Pertenece a un merchant. Tiene `sport`, `capacity`, `isCovered`, `price` base. Cada venue tiene slots.
+- **Slot** = horario de una venue. Tiene `startTime`/`endTime`, `price`, `status: available | blocked | reserved`.
+
+**Decisión clave**: la home consume `list-merchants` directamente (en lugar de pedir todos los venues y agrupar). El backend ya devuelve `minPrice`, `sports[]` y `venuesCount` calculados, por lo que el FE recibe la lista lista para renderear.
+
+Limitaciones del endpoint que se compensan client-side:
+
+- `list-merchants` solo acepta `sport` y `with_deposit`. Los filtros `location` (substring sobre `merchant.address`) y `maxPrice` (`m.minPrice <= maxPrice`) se aplican **post-fetch** en el hook `useMerchants`.
+- `Merchant` no trae `imageUrl` en el shape backend. El service deriva una URL determinística `https://picsum.photos/seed/${slug}/240/240` en `withImageUrl()`. Cuando backend agregue imagen real, alcanza con borrar el helper.
+
+Flow completo end-to-end:
+
+| Paso | Pantalla | HTTP calls |
+|---|---|---|
+| Search submit | `/` | 1 × `list-merchants?sport=X&with_deposit?=true` |
+| Tap merchant | `/merchants/[id]?sport=X` | 1 × `list-venues?sport=X` (server-side, filtra por `merchant.id` client-side) + N × `list-slots?venue_id=Y` (paralelos, 1 por cancha del merchant) |
+| Confirmar reserva | (modal) | 1 × `create-reservations-bulk` |
+| Redirect a mis reservas | `/mis-reservas` | 1 × `list-user-reservations` (cuando se integre — hoy mock) |
+
+### Cliente HTTP (`lib/api.ts`)
+
+Wrapper único contra Supabase Edge Functions. Centraliza:
+
+- `API_BASE` armado a partir de `NEXT_PUBLIC_SUPABASE_URL` + `/functions/v1`.
+- `ANON_KEY` desde `NEXT_PUBLIC_SUPABASE_ANON_KEY` (pública, segura en el bundle porque RLS está deny-all y todo pasa por edge functions con `service_role`).
+- `apiFetch<T>(path, { method, query, body, userId, signal })`: hace el `fetch`, agrega siempre header `apikey`, agrega `X-User-Id` si se pasa `userId`, serializa body como JSON.
+- `toSnakeCaseParams()`: convierte keys camelCase del FE (`maxPrice`, `withDeposit`) a snake_case del backend (`max_price`, `with_deposit`), omitiendo `undefined`/`null`/string vacío.
+- **`ApiError`**: subclase de `Error` con `code` (del body `error.code` cuando existe, ej. `slot_not_available`) + `status` HTTP + `body` raw. Los services hacen `instanceof ApiError` para detectar errores tipados (ej. 404 → `null` en `getVenueById`, 409 → snackbar específico en `SlotBookingPanel`).
 
 ### Auth
 
-El bridge real de MODO va a inyectar un JWT en `sessionStorage["modo_auth_token"]` antes de que cargue la mini-app. La estrategia hoy:
+El bridge real de MODO va a inyectar un `userId` opaco en `sessionStorage["modo_user_id"]` antes de que cargue la mini-app. La estrategia hoy:
 
-- **`app/lib/auth.ts`** expone `getAuthToken()`. Lee `sessionStorage`; si está vacío auto-seedea con `mock-modo-token-abc123` para que el flujo dev funcione sin estar embebido.
-- **Token opaco**: nunca parseamos el JWT ni extraemos el `userId`. Lo único que hacemos con él es pasarlo crudo al backend como `Authorization: Bearer <token>` cuando conectemos la API real. El backend resuelve el usuario.
-- **Solo cliente**: `getAuthToken()` throwa si lo invocan en server (depende de `window`). Los servicios que lo necesitan (`createBooking`, `fetchUserBookings`) son client-callable.
+- **`app/lib/auth.ts`** expone `getUserId()`. Lee `sessionStorage["modo_user_id"]`; si está vacío auto-seedea con `landing-demo-001` para que dev funcione sin estar embebido.
+- **userId opaco**: nunca lo parseamos. Lo mandamos crudo al backend como header `X-User-Id` en los endpoints que lo requieren (`create-reservations-bulk`, `list-user-reservations`, `cancel-user-reservation`). El backend resuelve el usuario.
+- **Solo cliente**: `getUserId()` throwa si lo invocan en server (depende de `window`). Los servicios que lo necesitan son client-callable.
+- Nota: el MVP del hackathon del backend **no valida JWT**, confía en el `X-User-Id` que llega. Cuando MODO lo cablée real, va a ser otro string opaco — el contrato del FE no cambia.
 
-### Reservas (mock)
+### Reservas (transición backend real / mock)
 
-- **`app/data/bookings.ts`** mantiene un store mutable a nivel módulo: `BOOKINGS: Booking[]`. Arranca con un seed de 5 reservas (mezcla pasadas/futuras, dates relativos a hoy vía `addDays(todayIso(), n)`).
-- `addBooking()` hace push al store; `getAllBookings()` lo devuelve.
-- El store **persiste durante la vida del bundle JS** (sobrevive a navegaciones client-side) pero se resetea al recargar la página. Es la limitación esperada de un mock sin backend.
 - **`app/services/bookings.ts`**:
-  - `createBooking({ venueId, courtId, slotIds, date })`: regenera los slots de la cancha (mismo algoritmo que `fetchSlots`), filtra por `slotIds`, arma el `Booking` con snapshot denormalizado de venue/court/slots y lo agrega al store. Llama `getAuthToken()` aunque no lo use (refleja el contrato real).
-  - `fetchUserBookings()`: devuelve todas las reservas del store ordenadas por fecha desc. También llama `getAuthToken()`.
-  - `cancelBooking(bookingId)`: soft-delete (muta `status` a `"cancelled"` en el store, no remueve el registro). Devuelve el booking actualizado o throwa si no existe. Token por header (mismo patrón).
+  - `createReservations({ slotIds })`: **real**. `POST /create-reservations-bulk` con body `{ slot_ids }` + header `X-User-Id`. Devuelve `Reservation[]` (1 por slot reservado), shape backend con campos de seña que el FE ignora en v1 (`deposit_amount`, `balance_amount`, etc.). El backend deduce la modalidad por merchant. 409 con `slot_not_available`/`slot_already_reserved` se mapea en `SlotBookingPanel` a "Ese turno ya no está disponible".
+  - `fetchUserBookings()`: **mock** todavía. Lee del store mutable en `app/data/bookings.ts`. Pendiente migrar a `GET /list-user-reservations` cuando llegue el contrato de respuesta.
+  - `cancelBooking(bookingId)`: **mock**. Soft-delete en el store. Pendiente migrar a `DELETE /cancel-user-reservation?id=<uuid>`.
+- **`app/data/bookings.ts`** sigue funcionando como store de mock con seed (5 reservas, mix pasadas/futuras/canceladas) hasta que ambos endpoints de "Mis reservas" estén disponibles.
+- **Cacheo transicional**: tras un `createReservations` exitoso, `SlotBookingPanel` llama a `recordReservationsAsMockBooking(reservations, snapshot)` que arma un `Booking` con la info que el FE ya tenía (merchant, venue, slots seleccionados, fecha) y lo agrega al store mock. Así la reserva nueva aparece inmediatamente en `/mis-reservas` aunque `fetchUserBookings` siga sirviendo del store local. El helper se borra cuando el listado consuma `list-user-reservations`. Recordá que el store se resetea al recargar la página: lo que reserves persiste solo durante la vida del bundle JS.
 
 ### Inferencia de filtros (Claude)
 
@@ -141,10 +179,24 @@ Los campos que no vinieron del LLM mantienen el default actual del context (`dat
 
 | Ruta | Tipo | Notas |
 |---|---|---|
-| `/` | Client (vía `SearchExperience`) | Home con search + lista |
+| `/` | Client (vía `SearchExperience`) | Home con search + lista de merchants |
+| `/merchants/[merchantId]?sport=X` | Server | Async `params`+`searchParams`. Filtra venues por `merchant.id` y delega a `<SlotBookingPanel />`. Sport inválido o merchant vacío → `notFound()` |
+| `/mis-reservas` | Server shell | Lee `searchParams.confirmed`, pasa `justConfirmed` a `<BookingsList />` client. `BookingsList` fetchea bookings en mount, separa Próximas/Pasadas, dispara snackbar si viene de un confirm y limpia la URL con `router.replace` |
 | `POST /api/parse-search` | Route Handler server | Recibe `{ query, today }`, llama Claude vía AI SDK, devuelve los 4 filtros (nullables) |
-| `/venues/[venueId]` | Server | `params: Promise<...>` (async), fetchea data y pasa a `<SlotBookingPanel />` |
-| `/mis-reservas` | Server shell | Lee `searchParams.confirmed`, pasa `justConfirmed` a `<BookingsList />` client. `BookingsList` fetchea bookings en mount, separa Próximas/Pasadas, dispara snackbar si viene de un confirm y limpia la URL con `router.replace`. |
+
+### Endpoints externos (Supabase Edge Functions)
+
+Base: `${NEXT_PUBLIC_SUPABASE_URL}/functions/v1`. Headers comunes: `apikey` siempre; `X-User-Id` cuando aplica.
+
+| Endpoint | Estado FE | Notas |
+|---|---|---|
+| `GET /list-merchants` | **integrado** | Query: `sport?`, `with_deposit?`. Usado por el home. |
+| `GET /list-venues` | **integrado** | Query: `sport` (req), `location?`, `max_price?`, `with_deposit?`. Usado por merchant detail page (server). |
+| `GET /get-venue?id=<uuid>` | **integrado** | 404 → `null` (capturado vía `ApiError`) |
+| `GET /list-slots?venue_id&date?` | **integrado** | Flat `Slot[]`; cada slot trae `venue` embebido |
+| `POST /create-reservations-bulk` | **integrado** | Body `{ slot_ids }` + `X-User-Id`. 409 → snackbar específico |
+| `GET /list-user-reservations?status?&page?&page_size?` | mock | Pendiente contrato de respuesta |
+| `DELETE /cancel-user-reservation?id=<uuid>` | mock | Pendiente contrato de respuesta |
 
 ## 6. Design tokens
 
@@ -170,10 +222,16 @@ Animaciones custom: `filter-panel-enter` para los panels que se montan al abrir 
 ## 8. Pendiente / siguiente iteración
 
 - **AppHeader global**: hoy solo el home tiene link a `/mis-reservas` (top-right). Si crece la cantidad de pantallas con navegación principal, abstraer a un header global.
-- **Auth bridge real**: hoy `getAuthToken()` auto-seedea mock; cuando estemos embebidos en MODO el token ya estará en `sessionStorage`.
-- **MODO Pay bridge** real con manejo de success/failure/timeout. Hoy `createBooking` confirma directo sin pago.
+- **Auth bridge real**: hoy `getUserId()` auto-seedea mock; cuando estemos embebidos en MODO el userId ya estará en `sessionStorage["modo_user_id"]`.
+- **`fetchSlots` real (`GET /list-slots`)**: hoy sigue mock. Pendiente alineación con backend sobre cómo se modela el "court" (en el backend cada venue parece ser ya un único court, lo cual elimina `CourtTabs` o lo deja con una sola pestaña).
+- **`fetchUserBookings` real (`GET /list-user-reservations`)**: pendiente que backend documente el shape de respuesta (paginación, embebido de slot+venue para poder renderizar cards).
+- **`cancelBooking` real (`DELETE /cancel-user-reservation`)**: pendiente shape de respuesta (204 vs 200 con reserva actualizada).
+- **MODO Pay bridge** real con manejo de success/failure/timeout. Hoy `createReservations` confirma directo sin pago.
 - **Server-side hold** con expiración a 5min y liberación on-timeout.
-- **Reembolso real vía MODO** post-cancelación. Hoy `cancelBooking` solo actualiza el status; en producción tiene que disparar el bridge de MODO para reembolsar el pago.
+- **Reembolso real vía MODO** post-cancelación. El backend ya modela `deposit_status: 'refunded'`, falta cablear el bridge de MODO desde el FE.
+- **Seña en v1**: backend ya soporta y crea reservas `with_deposit` para Club Padel Demo. El FE las ignora visualmente; cuando producto defina UX para mostrarlas (badge, total + seña, balance pendiente), sumarlo a `BookingCard` y al modal de confirmación.
+- **Contact data en `createReservations`**: backend acepta `clientName/Phone/Email` opcionales. Hoy no los mandamos; si el merchant los pide en su backoffice, agregar un formulario previo a la confirmación.
+- **Seed limitado**: backend solo tiene paddle + fútbol seeded; tenis y básquet devuelven lista vacía. Si Backend no los agrega a corto plazo, evaluar deshabilitar visualmente esos chips en el `SearchBar`/`SearchExperience`.
 - **Contador en tabs de reservas** (`Próximas (3)` / `Pasadas (7)`).
-- **Rate limiting del parser** (`/api/parse-search`): hoy expuesto sin control. Antes de prod, limit por IP o por token MODO + budget alert en Anthropic console.
+- **Rate limiting del parser** (`/api/parse-search`): hoy expuesto sin control. Antes de prod, limit por IP o por userId + budget alert en Anthropic console.
 - **Feedback visible de inferencia**: línea bajo el input tipo "Detectado: Fútbol · Mañana · Palermo · hasta $4000" para que el usuario entienda qué filtros se autocompletaron. Hoy se ve solo a través del cambio de los pills.

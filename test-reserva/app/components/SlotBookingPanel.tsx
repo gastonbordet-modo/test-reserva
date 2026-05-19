@@ -1,43 +1,83 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import type { Court } from "../services/slots";
-import { createBooking } from "../services/bookings";
+import type { Venue } from "../services/venues";
+import { fetchSlots, type Slot } from "../services/slots";
+import {
+  createReservations,
+  recordReservationsAsMockBooking,
+} from "../services/bookings";
 import { useSearchContext } from "../context/SearchContext";
 import { useSnackbar } from "../context/SnackbarContext";
+import { ApiError } from "../lib/api";
 import { SlotCard } from "./SlotCard";
 import { CourtTabs } from "./CourtTabs";
 import { ConfirmBookingModal } from "./ConfirmBookingModal";
 import { formatPrice } from "../lib/format";
 
 type Props = {
-  venueId: string;
-  venueName: string;
-  courts: Court[];
+  merchantName: string;
+  venues: Venue[];
 };
 
-export function SlotBookingPanel({ venueId, venueName, courts }: Props) {
+type SlotsState = {
+  byVenueId: Record<string, Slot[]>;
+  loading: boolean;
+};
+
+export function SlotBookingPanel({ merchantName, venues }: Props) {
   const router = useRouter();
   const { date } = useSearchContext();
   const { show } = useSnackbar();
-  const [activeCourtId, setActiveCourtId] = useState<string>(
-    () => courts[0]?.id ?? ""
+  const [activeVenueId, setActiveVenueId] = useState<string>(
+    () => venues[0]?.id ?? ""
   );
   const [selected, setSelected] = useState<Set<string>>(() => new Set());
   const [modalOpen, setModalOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [slotsState, setSlotsState] = useState<SlotsState>({
+    byVenueId: {},
+    loading: true,
+  });
+  const [reloadTick, setReloadTick] = useState(0);
 
-  if (courts.length === 0) {
+  useEffect(() => {
+    if (venues.length === 0) {
+      setSlotsState({ byVenueId: {}, loading: false });
+      return;
+    }
+    let cancelled = false;
+    setSlotsState((prev) => ({ ...prev, loading: true }));
+    Promise.all(
+      venues.map((v) =>
+        fetchSlots(v.id, date || undefined).catch(() => [] as Slot[])
+      )
+    ).then((results) => {
+      if (cancelled) return;
+      const byVenueId: Record<string, Slot[]> = {};
+      venues.forEach((v, i) => {
+        byVenueId[v.id] = results[i];
+      });
+      setSlotsState({ byVenueId, loading: false });
+      setSelected(new Set());
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [venues, date, reloadTick]);
+
+  if (venues.length === 0) {
     return (
       <p className="text-sm text-text-gray mt-4">
-        No hay canchas disponibles para este venue.
+        No hay canchas disponibles para este complejo.
       </p>
     );
   }
 
-  const activeCourt =
-    courts.find((c) => c.id === activeCourtId) ?? courts[0];
+  const activeVenue =
+    venues.find((v) => v.id === activeVenueId) ?? venues[0];
+  const activeSlots = slotsState.byVenueId[activeVenue.id] ?? [];
 
   function toggle(id: string) {
     setSelected((prev) => {
@@ -48,75 +88,100 @@ export function SlotBookingPanel({ venueId, venueName, courts }: Props) {
     });
   }
 
-  function handleCourtChange(courtId: string) {
-    if (courtId === activeCourtId) return;
-    setActiveCourtId(courtId);
+  function handleVenueChange(venueId: string) {
+    if (venueId === activeVenueId) return;
+    setActiveVenueId(venueId);
     setSelected(new Set());
   }
 
-  const selectedSlots = activeCourt.slots.filter((s) => selected.has(s.id));
+  const selectedSlots = activeSlots.filter((s) => selected.has(s.id));
   const total = selectedSlots.reduce((sum, s) => sum + s.price, 0);
 
   async function handleConfirm() {
     if (selected.size === 0 || submitting) return;
     setSubmitting(true);
     try {
-      await createBooking({
-        venueId,
-        courtId: activeCourt.id,
+      const reservations = await createReservations({
         slotIds: [...selected],
+      });
+      recordReservationsAsMockBooking(reservations, {
+        merchantName,
+        venueId: activeVenue.id,
+        venueName: activeVenue.name,
+        venueAddress: activeVenue.address,
+        venueImageUrl: activeVenue.imageUrl,
+        venueDescription: `${activeVenue.isCovered ? "Techada" : "Al aire libre"} · ${activeVenue.capacity} jugadores`,
         date,
+        slots: selectedSlots.map((s) => ({
+          id: s.id,
+          startTime: s.startTime,
+          endTime: s.endTime,
+          price: s.price,
+        })),
       });
       router.push("/mis-reservas?confirmed=1");
     } catch (err) {
       setModalOpen(false);
-      const message = err instanceof Error ? err.message : "Error al reservar";
+      setSelected(new Set());
+      const isStale =
+        err instanceof ApiError &&
+        (err.code === "slot_not_available" ||
+          err.code === "slot_already_reserved");
+      const message = isStale
+        ? "Ese turno ya no está disponible"
+        : err instanceof Error
+          ? err.message
+          : "Error al reservar";
       show(message, { variant: "error" });
       setSubmitting(false);
+      if (isStale) setReloadTick((t) => t + 1);
     }
   }
 
-  const showTabs = courts.length > 1;
+  const showTabs = venues.length > 1;
 
   return (
     <>
       {showTabs && (
         <CourtTabs
-          courts={courts}
-          activeCourtId={activeCourt.id}
-          onChange={handleCourtChange}
+          venues={venues}
+          activeVenueId={activeVenue.id}
+          onChange={handleVenueChange}
         />
       )}
 
       <div
-        id={`court-panel-${activeCourt.id}`}
+        id={`venue-panel-${activeVenue.id}`}
         role="tabpanel"
-        aria-labelledby={showTabs ? `court-tab-${activeCourt.id}` : undefined}
+        aria-labelledby={showTabs ? `venue-tab-${activeVenue.id}` : undefined}
         className="mt-3 sm:mt-4"
       >
         <div className="flex items-baseline justify-between gap-3 mb-2">
           <div className="min-w-0">
             <h2 className="text-base sm:text-lg font-semibold text-text-light truncate">
-              {activeCourt.name}
+              {activeVenue.name}
             </h2>
             <p className="text-xs sm:text-sm text-text-gray truncate">
-              {activeCourt.description}
+              {activeVenue.isCovered ? "Techada" : "Al aire libre"} ·{" "}
+              {activeVenue.capacity} jugadores
             </p>
           </div>
         </div>
 
         <div className="flex flex-col gap-2">
-          {activeCourt.slots.length === 0 ? (
+          {slotsState.loading ? (
+            <p className="text-sm text-text-gray">Cargando horarios...</p>
+          ) : activeSlots.length === 0 ? (
             <p className="text-sm text-text-gray">
               No hay horarios para esta cancha.
             </p>
           ) : (
-            activeCourt.slots.map((slot) => (
+            activeSlots.map((slot) => (
               <SlotCard
                 key={slot.id}
                 slot={slot}
                 selected={selected.has(slot.id)}
-                disabled={slot.occupied}
+                disabled={slot.status !== "available"}
                 onToggle={() => toggle(slot.id)}
               />
             ))
@@ -145,8 +210,11 @@ export function SlotBookingPanel({ venueId, venueName, courts }: Props) {
           if (!submitting) setModalOpen(false);
         }}
         onConfirm={handleConfirm}
-        venueName={venueName}
-        court={{ name: activeCourt.name, description: activeCourt.description }}
+        venueName={merchantName}
+        court={{
+          name: activeVenue.name,
+          description: `${activeVenue.isCovered ? "Techada" : "Al aire libre"} · ${activeVenue.capacity} jugadores`,
+        }}
         date={date}
         slots={selectedSlots}
         totalPrice={total}

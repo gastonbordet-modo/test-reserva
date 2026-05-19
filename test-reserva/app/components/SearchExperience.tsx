@@ -18,7 +18,7 @@ import { FilterPill } from "./FilterPill";
 import { LocationFilter } from "./filters/LocationFilter";
 import { PriceFilter } from "./filters/PriceFilter";
 import { DateFilter } from "./filters/DateFilter";
-import { VenueList } from "./VenueList";
+import { MerchantList } from "./MerchantList";
 
 export function SearchExperience() {
   const {
@@ -146,7 +146,7 @@ export function SearchExperience() {
           )}
         </div>
 
-        {submitted && <VenueList />}
+        {submitted && <MerchantList />}
       </div>
     </div>
   );

@@ -1,16 +1,16 @@
-const TOKEN_KEY = "modo_auth_token";
-const MOCK_TOKEN = "mock-modo-token-abc123";
+const USER_ID_KEY = "modo_user_id";
+const MOCK_USER_ID = "landing-demo-001";
 
-export function getAuthToken(): string {
+export function getUserId(): string {
   if (typeof window === "undefined") {
     throw new Error(
-      "getAuthToken() solo puede llamarse desde el cliente (depende de sessionStorage)"
+      "getUserId() solo puede llamarse desde el cliente (depende de sessionStorage)"
     );
   }
 
-  const existing = window.sessionStorage.getItem(TOKEN_KEY);
+  const existing = window.sessionStorage.getItem(USER_ID_KEY);
   if (existing) return existing;
 
-  window.sessionStorage.setItem(TOKEN_KEY, MOCK_TOKEN);
-  return MOCK_TOKEN;
+  window.sessionStorage.setItem(USER_ID_KEY, MOCK_USER_ID);
+  return MOCK_USER_ID;
 }

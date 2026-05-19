@@ -1,38 +1,38 @@
 "use client";
 
-import type { Court } from "../services/slots";
+import type { Venue } from "../services/venues";
 
 type Props = {
-  courts: Court[];
-  activeCourtId: string;
-  onChange: (courtId: string) => void;
+  venues: Venue[];
+  activeVenueId: string;
+  onChange: (venueId: string) => void;
 };
 
-export function CourtTabs({ courts, activeCourtId, onChange }: Props) {
+export function CourtTabs({ venues, activeVenueId, onChange }: Props) {
   return (
     <div
       role="tablist"
       aria-label="Canchas"
       className="flex overflow-x-auto -mx-4 px-4 gap-1 border-b border-gray-20 scrollbar-none"
     >
-      {courts.map((court) => {
-        const active = court.id === activeCourtId;
+      {venues.map((venue) => {
+        const active = venue.id === activeVenueId;
         return (
           <button
-            key={court.id}
+            key={venue.id}
             type="button"
             role="tab"
             aria-selected={active}
-            aria-controls={`court-panel-${court.id}`}
-            id={`court-tab-${court.id}`}
-            onClick={() => onChange(court.id)}
+            aria-controls={`venue-panel-${venue.id}`}
+            id={`venue-tab-${venue.id}`}
+            onClick={() => onChange(venue.id)}
             className={`flex-shrink-0 cursor-pointer px-4 py-2.5 -mb-px text-sm font-medium rounded-t-modo-md border transition-colors ${
               active
                 ? "bg-paper border-gray-20 border-b-paper text-brand"
                 : "bg-transparent border-transparent text-text-gray hover:text-brand"
             }`}
           >
-            {court.name}
+            {venue.name}
           </button>
         );
       })}
