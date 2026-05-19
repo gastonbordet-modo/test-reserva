@@ -114,7 +114,7 @@ export function SearchExperience() {
               icon={faTag}
               label={
                 appliedFilters.has("price")
-                  ? `$${formatPrice(maxPrice)}`
+                  ? `Hasta $${formatPrice(maxPrice)}`
                   : "Precio máximo"
               }
               active={appliedFilters.has("price")}
