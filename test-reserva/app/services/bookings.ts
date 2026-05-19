@@ -2,6 +2,7 @@ import { MOCK_VENUES } from "../data/venues";
 import {
   addBooking,
   getAllBookings,
+  updateBookingStatus,
   type Booking,
   type BookingSlot,
 } from "../data/bookings";
@@ -102,4 +103,14 @@ export async function fetchUserBookings(): Promise<Booking[]> {
   await new Promise((resolve) => setTimeout(resolve, 250));
 
   return [...getAllBookings()].sort((a, b) => (a.date < b.date ? 1 : -1));
+}
+
+export async function cancelBooking(bookingId: string): Promise<Booking> {
+  getAuthToken();
+
+  await new Promise((resolve) => setTimeout(resolve, 300));
+
+  const updated = updateBookingStatus(bookingId, "cancelled");
+  if (!updated) throw new Error("Reserva no encontrada");
+  return updated;
 }

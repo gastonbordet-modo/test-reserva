@@ -1,10 +1,13 @@
 import Image from "next/image";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faXmark } from "@fortawesome/free-solid-svg-icons";
 import type { Booking } from "../services/bookings";
 import { formatPrice, formatDateLabel } from "../lib/format";
 
 type Props = {
   booking: Booking;
   variant: "upcoming" | "past";
+  onCancel?: (booking: Booking) => void;
 };
 
 function formatSlotRange(slots: Booking["slots"]): string {
@@ -16,7 +19,7 @@ function formatSlotRange(slots: Booking["slots"]): string {
   return `${range} · ${slots.length} slots`;
 }
 
-export function BookingCard({ booking, variant }: Props) {
+export function BookingCard({ booking, variant, onCancel }: Props) {
   const cancelled = booking.status === "cancelled";
 
   const containerClass =
@@ -60,9 +63,25 @@ export function BookingCard({ booking, variant }: Props) {
         <p className="text-xs sm:text-sm text-text-gray truncate">
           {formatDateLabel(booking.date)} · {formatSlotRange(booking.slots)}
         </p>
-        <p className={`text-sm sm:text-base font-semibold mt-auto ${totalColor}`}>
-          ${formatPrice(booking.totalPrice)}
-        </p>
+        <div className="flex items-end justify-between gap-2 mt-auto">
+          <p className={`text-sm sm:text-base font-semibold ${totalColor}`}>
+            ${formatPrice(booking.totalPrice)}
+          </p>
+          {variant === "upcoming" && onCancel && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onCancel(booking);
+              }}
+              aria-label="Cancelar reserva"
+              className="inline-flex items-center gap-1 text-xs sm:text-sm font-semibold text-system-error hover:opacity-80 cursor-pointer transition-opacity"
+            >
+              <FontAwesomeIcon icon={faXmark} />
+              <span>Cancelar</span>
+            </button>
+          )}
+        </div>
       </div>
     </article>
   );

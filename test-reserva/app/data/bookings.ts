@@ -171,3 +171,16 @@ export function getAllBookings(): Booking[] {
 export function addBooking(b: Booking): void {
   BOOKINGS = [b, ...BOOKINGS];
 }
+
+export function updateBookingStatus(
+  id: string,
+  status: BookingStatus
+): Booking | null {
+  let updated: Booking | null = null;
+  BOOKINGS = BOOKINGS.map((b) => {
+    if (b.id !== id) return b;
+    updated = { ...b, status };
+    return updated;
+  });
+  return updated;
+}

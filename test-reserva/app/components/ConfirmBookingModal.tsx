@@ -3,8 +3,14 @@
 import { useEffect, useId, useRef } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faClock } from "@fortawesome/free-solid-svg-icons";
-import type { Slot } from "../services/slots";
 import { formatPrice, formatDateLabel } from "../lib/format";
+
+type ModalSlot = {
+  id: string;
+  startTime: string;
+  endTime: string;
+  price: number;
+};
 
 type Props = {
   open: boolean;
@@ -13,9 +19,15 @@ type Props = {
   venueName: string;
   court: { name: string; description: string };
   date: string;
-  slots: Slot[];
+  slots: ModalSlot[];
   totalPrice: number;
   submitting: boolean;
+  title?: string;
+  description?: string;
+  actionLabel?: string;
+  submittingLabel?: string;
+  actionVariant?: "primary" | "destructive";
+  showDepositBadge?: boolean;
 };
 
 export function ConfirmBookingModal({
@@ -28,6 +40,12 @@ export function ConfirmBookingModal({
   slots,
   totalPrice,
   submitting,
+  title = "Confirmar reserva",
+  description,
+  actionLabel = "Confirmar",
+  submittingLabel = "Reservando...",
+  actionVariant = "primary",
+  showDepositBadge = true,
 }: Props) {
   const titleId = useId();
   const confirmBtnRef = useRef<HTMLButtonElement>(null);
@@ -69,8 +87,11 @@ export function ConfirmBookingModal({
               id={titleId}
               className="text-lg sm:text-xl font-bold text-text-light"
             >
-              Confirmar reserva
+              {title}
             </h2>
+            {description && (
+              <p className="text-sm text-text-gray mt-1">{description}</p>
+            )}
           </div>
 
           <div className="px-5 py-3 flex flex-col gap-4 overflow-y-auto">
@@ -127,11 +148,13 @@ export function ConfirmBookingModal({
               </ul>
             </div>
 
-            <div>
-              <span className="inline-flex items-center gap-1.5 bg-gray-08 text-text-gray rounded-modo-button px-3 py-1.5 text-xs font-medium">
-                Sin seña
-              </span>
-            </div>
+            {showDepositBadge && (
+              <div>
+                <span className="inline-flex items-center gap-1.5 bg-gray-08 text-text-gray rounded-modo-button px-3 py-1.5 text-xs font-medium">
+                  Sin seña
+                </span>
+              </div>
+            )}
 
             <div className="flex items-baseline justify-between border-t border-gray-20 pt-3">
               <span className="text-sm text-text-gray font-medium">Total</span>
@@ -160,9 +183,13 @@ export function ConfirmBookingModal({
               type="button"
               onClick={onConfirm}
               disabled={submitting}
-              className="flex-1 bg-brand text-paper rounded-modo-button py-3 font-semibold shadow-modo hover:bg-brand-dark disabled:bg-gray-20 disabled:text-text-gray disabled:cursor-not-allowed cursor-pointer transition-colors"
+              className={`flex-1 text-paper rounded-modo-button py-3 font-semibold shadow-modo disabled:bg-gray-20 disabled:text-text-gray disabled:cursor-not-allowed cursor-pointer transition-colors ${
+                actionVariant === "destructive"
+                  ? "bg-system-error hover:opacity-90"
+                  : "bg-brand hover:bg-brand-dark"
+              }`}
             >
-              {submitting ? "Reservando..." : "Confirmar"}
+              {submitting ? submittingLabel : actionLabel}
             </button>
           </div>
         </div>

@@ -4,12 +4,14 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
+  cancelBooking,
   fetchUserBookings,
   type Booking,
 } from "../services/bookings";
 import { useSnackbar } from "../context/SnackbarContext";
 import { todayIso } from "../lib/format";
 import { BookingCard } from "./BookingCard";
+import { ConfirmBookingModal } from "./ConfirmBookingModal";
 
 type TabId = "upcoming" | "past";
 
@@ -23,6 +25,8 @@ export function BookingsList({ justConfirmed }: Props) {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<TabId>("upcoming");
+  const [cancelTarget, setCancelTarget] = useState<Booking | null>(null);
+  const [cancelling, setCancelling] = useState(false);
 
   useEffect(() => {
     if (!justConfirmed) return;
@@ -69,6 +73,26 @@ export function BookingsList({ justConfirmed }: Props) {
   }, [bookings]);
 
   const current = activeTab === "upcoming" ? upcoming : past;
+
+  async function handleCancel() {
+    if (!cancelTarget || cancelling) return;
+    setCancelling(true);
+    try {
+      const updated = await cancelBooking(cancelTarget.id);
+      setBookings((prev) =>
+        prev.map((b) => (b.id === updated.id ? updated : b))
+      );
+      setCancelTarget(null);
+      show("Reserva cancelada", { variant: "success" });
+    } catch (err) {
+      setCancelTarget(null);
+      const message =
+        err instanceof Error ? err.message : "No se pudo cancelar la reserva";
+      show(message, { variant: "error" });
+    } finally {
+      setCancelling(false);
+    }
+  }
 
   return (
     <>
@@ -126,10 +150,38 @@ export function BookingsList({ justConfirmed }: Props) {
           )
         ) : (
           current.map((b) => (
-            <BookingCard key={b.id} booking={b} variant={activeTab} />
+            <BookingCard
+              key={b.id}
+              booking={b}
+              variant={activeTab}
+              onCancel={activeTab === "upcoming" ? setCancelTarget : undefined}
+            />
           ))
         )}
       </div>
+
+      <ConfirmBookingModal
+        open={cancelTarget !== null}
+        onClose={() => {
+          if (!cancelling) setCancelTarget(null);
+        }}
+        onConfirm={handleCancel}
+        venueName={cancelTarget?.venue.name ?? ""}
+        court={{
+          name: cancelTarget?.court.name ?? "",
+          description: cancelTarget?.court.description ?? "",
+        }}
+        date={cancelTarget?.date ?? ""}
+        slots={cancelTarget?.slots ?? []}
+        totalPrice={cancelTarget?.totalPrice ?? 0}
+        submitting={cancelling}
+        title="Cancelar reserva"
+        description="Esta acción no se puede deshacer. El reembolso se procesa por MODO."
+        actionLabel="Sí, cancelar"
+        submittingLabel="Cancelando..."
+        actionVariant="destructive"
+        showDepositBadge={false}
+      />
     </>
   );
 }

@@ -116,6 +116,11 @@ El bridge real de MODO va a inyectar un JWT en `sessionStorage["modo_auth_token"
 - **`app/services/bookings.ts`**:
   - `createBooking({ venueId, courtId, slotIds, date })`: regenera los slots de la cancha (mismo algoritmo que `fetchSlots`), filtra por `slotIds`, arma el `Booking` con snapshot denormalizado de venue/court/slots y lo agrega al store. Llama `getAuthToken()` aunque no lo use (refleja el contrato real).
   - `fetchUserBookings()`: devuelve todas las reservas del store ordenadas por fecha desc. También llama `getAuthToken()`.
+  - `cancelBooking(bookingId)`: soft-delete (muta `status` a `"cancelled"` en el store, no remueve el registro). Devuelve el booking actualizado o throwa si no existe. Token por header (mismo patrón).
+
+### Modal de confirmación genérico
+
+`ConfirmBookingModal` se usa tanto para confirmar como para cancelar. Props relevantes para variar el comportamiento: `title`, `description`, `actionLabel`, `submittingLabel`, `actionVariant: "primary" | "destructive"`, `showDepositBadge`. El tipo de slots aceptado es un shape mínimo (`{ id, startTime, endTime, price }`) compatible con `Slot` (servicios) y `BookingSlot` (reservas).
 
 ## 5. Routing
 
@@ -152,5 +157,5 @@ Animaciones custom: `filter-panel-enter` para los panels que se montan al abrir 
 - **Auth bridge real**: hoy `getAuthToken()` auto-seedea mock; cuando estemos embebidos en MODO el token ya estará en `sessionStorage`.
 - **MODO Pay bridge** real con manejo de success/failure/timeout. Hoy `createBooking` confirma directo sin pago.
 - **Server-side hold** con expiración a 5min y liberación on-timeout.
-- **Cancelación de reservas** desde `BookingCard` en tab Próximas + reembolso vía MODO. La card ya tiene el espacio visual reservado; falta acción + servicio `cancelBooking`.
+- **Reembolso real vía MODO** post-cancelación. Hoy `cancelBooking` solo actualiza el status; en producción tiene que disparar el bridge de MODO para reembolsar el pago.
 - **Contador en tabs de reservas** (`Próximas (3)` / `Pasadas (7)`).

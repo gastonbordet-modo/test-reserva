@@ -120,9 +120,12 @@ Hoy reservar una cancha implica coordinar por WhatsApp con cada club: chequear d
 
 ### RF-7 Cancelación
 
-- Disponible solo en reservas próximas.
-- Pide confirmación.
-- Marca la reserva como cancelada y dispara reembolso vía MODO.
+- Disponible solo en reservas próximas (botón "Cancelar" inline en la `BookingCard` con estilo destructivo).
+- Tap abre el modal genérico (`ConfirmBookingModal`) con título "Cancelar reserva", descripción de que la acción es irreversible, sin badge de "Sin seña", CTA destructivo "Sí, cancelar".
+- Al confirmar: `cancelBooking(bookingId)` (soft-delete: status → `"cancelled"`).
+  - Success → modal se cierra, snackbar verde "Reserva cancelada", la card desaparece de Próximas. Si el usuario va a Pasadas la encuentra con badge "Cancelada".
+  - Error → modal se cierra, snackbar rojo con el mensaje.
+- En backend real: además dispara reembolso vía MODO Pay (pendiente).
 
 ## 8. Requisitos no funcionales
 
