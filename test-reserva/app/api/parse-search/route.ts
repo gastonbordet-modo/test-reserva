@@ -35,7 +35,7 @@ function systemPrompt(today: string): string {
     `Reglas por campo:`,
     `- sport: uno de "futbol" | "tenis" | "basquet" | "paddle". Mapeá tolerando typos y variantes ("futvol" → "futbol", "padel"/"paddle" → "paddle", "basket"/"básquet" → "basquet").`,
     `- date: ISO YYYY-MM-DD. Convertí fechas relativas usando "hoy" como referencia. Ejemplos: "hoy" → ${today}, "mañana" → al día siguiente, "el viernes" → próximo viernes (si hoy es viernes, el viernes que viene), "este finde" → próximo sábado.`,
-    `- location: string corto con el barrio/zona/ciudad mencionada, capitalizado (ej: "Palermo", "La Boca", "Núñez"). Corregí typos comunes ("palerno" → "Palermo").`,
+    `- location: string corto con el barrio/zona/ciudad mencionada, capitalizado (ej: "Palermo", "La Boca", "Núñez"). Corregí typos comunes ("palerno" → "Palermo"). Si el usuario menciona genéricamente la Ciudad Autónoma de Buenos Aires (variantes: "CABA", "Capital Federal", "Capital", "Ciudad de Buenos Aires", "Buenos Aires" cuando se refiere a la ciudad, "bsas", "baires"), devolvé exactamente "CABA". Si menciona un barrio específico dentro de la ciudad (Palermo, Belgrano, Recoleta, etc.), priorizá el barrio sobre "CABA".`,
     `- maxPrice: entero en pesos argentinos. Interpretá "lucas"/"luca" como miles (4 lucas = 4000). Solo si el texto sugiere un tope ("hasta", "máximo", "por menos de", "<"). Si dice "barato" sin número, null.`,
   ].join("\n");
 }
