@@ -4,23 +4,27 @@ import { useState } from "react";
 import type { Court } from "../services/slots";
 import { createBooking } from "../services/bookings";
 import { useSearchContext } from "../context/SearchContext";
+import { useSnackbar } from "../context/SnackbarContext";
 import { SlotCard } from "./SlotCard";
 import { CourtTabs } from "./CourtTabs";
+import { ConfirmBookingModal } from "./ConfirmBookingModal";
 import { formatPrice } from "../lib/format";
 
 type Props = {
   venueId: string;
+  venueName: string;
   courts: Court[];
 };
 
-export function SlotBookingPanel({ venueId, courts }: Props) {
+export function SlotBookingPanel({ venueId, venueName, courts }: Props) {
   const { date } = useSearchContext();
+  const { show } = useSnackbar();
   const [activeCourtId, setActiveCourtId] = useState<string>(
     () => courts[0]?.id ?? ""
   );
   const [selected, setSelected] = useState<Set<string>>(() => new Set());
+  const [modalOpen, setModalOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   if (courts.length === 0) {
     return (
@@ -46,17 +50,14 @@ export function SlotBookingPanel({ venueId, courts }: Props) {
     if (courtId === activeCourtId) return;
     setActiveCourtId(courtId);
     setSelected(new Set());
-    setError(null);
   }
 
-  const total = activeCourt.slots
-    .filter((s) => selected.has(s.id))
-    .reduce((sum, s) => sum + s.price, 0);
+  const selectedSlots = activeCourt.slots.filter((s) => selected.has(s.id));
+  const total = selectedSlots.reduce((sum, s) => sum + s.price, 0);
 
   async function handleConfirm() {
     if (selected.size === 0 || submitting) return;
     setSubmitting(true);
-    setError(null);
     try {
       const booking = await createBooking({
         venueId,
@@ -64,12 +65,16 @@ export function SlotBookingPanel({ venueId, courts }: Props) {
         slotIds: [...selected],
         date,
       });
-      alert(
-        `¡Reserva ${booking.id} confirmada en ${activeCourt.name} por $${formatPrice(booking.totalPrice)}!`
-      );
+      setModalOpen(false);
       setSelected(new Set());
+      show(
+        `¡Reserva confirmada en ${booking.court.name} por $${formatPrice(booking.totalPrice)}!`,
+        { variant: "success" }
+      );
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error al reservar");
+      setModalOpen(false);
+      const message = err instanceof Error ? err.message : "Error al reservar";
+      show(message, { variant: "error" });
     } finally {
       setSubmitting(false);
     }
@@ -124,26 +129,33 @@ export function SlotBookingPanel({ venueId, courts }: Props) {
       </div>
 
       <div className="fixed bottom-0 left-0 right-0 bg-paper border-t border-gray-20 p-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
-        <div className="max-w-md mx-auto flex flex-col gap-2">
-          {error && (
-            <p className="text-sm text-system-error" role="alert">
-              {error}
-            </p>
-          )}
+        <div className="max-w-md mx-auto">
           <button
             type="button"
-            onClick={handleConfirm}
-            disabled={selected.size === 0 || submitting}
+            onClick={() => setModalOpen(true)}
+            disabled={selected.size === 0}
             className="w-full bg-brand text-paper rounded-modo-button py-3 font-semibold shadow-modo hover:bg-brand-dark disabled:bg-gray-20 disabled:text-text-gray disabled:cursor-not-allowed cursor-pointer transition-colors"
           >
-            {submitting
-              ? "Reservando..."
-              : selected.size === 0
-                ? "Seleccioná uno o más slots"
-                : `Reservar ${selected.size} ${selected.size === 1 ? "slot" : "slots"} · $${formatPrice(total)}`}
+            {selected.size === 0
+              ? "Seleccioná uno o más slots"
+              : `Reservar ${selected.size} ${selected.size === 1 ? "slot" : "slots"} · $${formatPrice(total)}`}
           </button>
         </div>
       </div>
+
+      <ConfirmBookingModal
+        open={modalOpen}
+        onClose={() => {
+          if (!submitting) setModalOpen(false);
+        }}
+        onConfirm={handleConfirm}
+        venueName={venueName}
+        court={{ name: activeCourt.name, description: activeCourt.description }}
+        date={date}
+        slots={selectedSlots}
+        totalPrice={total}
+        submitting={submitting}
+      />
     </>
   );
 }

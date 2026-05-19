@@ -4,6 +4,7 @@ import { config } from "@fortawesome/fontawesome-svg-core";
 import "@fortawesome/fontawesome-svg-core/styles.css";
 import "./globals.css";
 import { SearchProvider } from "./context/SearchContext";
+import { SnackbarProvider } from "./context/SnackbarContext";
 
 config.autoAddCss = false;
 
@@ -29,7 +30,9 @@ export default function RootLayout({
       className={`${redHatDisplay.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-bg-home text-text-home">
-        <SearchProvider>{children}</SearchProvider>
+        <SearchProvider>
+          <SnackbarProvider>{children}</SnackbarProvider>
+        </SearchProvider>
       </body>
     </html>
   );

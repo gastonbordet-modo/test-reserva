@@ -22,6 +22,7 @@ app/
   globals.css                 Design tokens MODO, animaciones, resets
   context/
     SearchContext.tsx         Filtros + deporte detectado (estado global)
+    SnackbarContext.tsx       Provider global de snackbars (success/error)
   data/
     venues.ts                 Mock data fuente (MockVenue + MOCK_VENUES + minCourtPrice)
     bookings.ts               Seed estático + store in-memory de reservas
@@ -41,8 +42,9 @@ app/
     NumberStepper.tsx         Stepper reusable
     VenueList.tsx             Renderiza loading/empty/list
     VenueCard.tsx             Link a /venues/[id]
-    SlotBookingPanel.tsx      Multi-select + CTA fijo
+    SlotBookingPanel.tsx      Multi-select + CTA fijo + modal de confirmación
     SlotCard.tsx              Card individual de slot
+    ConfirmBookingModal.tsx   Bottom sheet de confirmación de reserva
     filters/
       LocationFilter.tsx
       PeopleFilter.tsx
@@ -138,6 +140,7 @@ Animaciones custom: `filter-panel-enter` para los panels que se montan al abrir 
 - **Click-outside** se resuelve con un `pointerdown` listener + ref al contenedor. `pointerdown` corre antes que el click del próximo target, dándole UX previsible al toggle de filter pills.
 - **`autoFocus`** en inputs de panel de filtro para que el teclado mobile aparezca solo.
 - **Auth**: los servicios que requieren token llaman a `getAuthToken()` internamente. Los componentes nunca tocan el token ni lo pasan como parámetro.
+- **Feedback**: el feedback efímero (success/error post-operación) usa `useSnackbar()` global. Cola de 1 — un nuevo `show()` reemplaza el anterior. Variants `success` (3s) y `error` (8s). Acciones importantes (confirmar reserva) se gatean detrás de un modal bottom-sheet (`ConfirmBookingModal`) con escape, click en backdrop y foco inicial al CTA.
 
 ## 8. Pendiente / siguiente iteración
 

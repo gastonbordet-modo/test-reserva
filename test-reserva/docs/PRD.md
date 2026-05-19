@@ -94,11 +94,13 @@ Hoy reservar una cancha implica coordinar por WhatsApp con cada club: chequear d
 
 ### RF-5 Confirmación de reserva
 
-- Tap "Reservar N slots · $X" abre hold del lado servidor.
-- Hold válido por **5 minutos**.
-- Bridge a MODO Pay con `bookingId`, slots y total.
-- Success → redirect a `/mis-reservas`.
-- Failure o timeout → liberar hold + error visible.
+- Tap "Reservar N slots · $X" abre un **modal de confirmación** (bottom-sheet en mobile) con resumen:
+  - Venue, cancha (nombre + descripción), fecha legible, listado de horarios, total destacado.
+  - Badge informativo "Sin seña" (v1 todas las reservas son sin seña, tanto en mock como en backend real).
+- Acciones del modal: "Cancelar" (cierra) y "Confirmar".
+- Al confirmar:
+  - **v1 mock**: dispara `createBooking` directo. Success → modal se cierra + **snackbar verde** "¡Reserva confirmada!" (3s). Error → modal se cierra + **snackbar rojo** con el mensaje (8s, dismissible).
+  - **v1 final con backend**: dispara hold de 5min y bridge a MODO Pay. Success → redirect a `/mis-reservas`. Failure/timeout → liberar hold + snackbar de error.
 
 ### RF-6 Mis reservas
 

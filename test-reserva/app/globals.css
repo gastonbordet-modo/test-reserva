@@ -161,3 +161,44 @@ input[type="number"] {
 .scrollbar-none::-webkit-scrollbar {
   display: none;
 }
+
+@keyframes sheet-slide-up {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+.sheet-enter {
+  animation: sheet-slide-up 250ms ease-out;
+}
+
+@keyframes backdrop-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.backdrop-enter {
+  animation: backdrop-fade-in 200ms ease-out;
+}
+
+@keyframes snackbar-slide-up {
+  from {
+    transform: translateY(120%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.snackbar-enter {
+  animation: snackbar-slide-up 250ms ease-out;
+}
