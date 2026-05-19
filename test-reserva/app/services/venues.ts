@@ -1,12 +1,27 @@
 import type { Sport } from "../context/SearchContext";
 import { ApiError, apiFetch } from "../lib/api";
 
+export type VenueMerchant = {
+  id: string;
+  name: string;
+  slug: string;
+  description: string;
+  address: string;
+  contactPhone: string;
+  contactEmail: string;
+  requiresDeposit: boolean;
+};
+
 export type Venue = {
   id: string;
   name: string;
   address: string;
   price: number;
   imageUrl: string;
+  sport: Sport;
+  capacity: number;
+  isCovered: boolean;
+  merchant: VenueMerchant;
 };
 
 export type FetchVenuesParams = {
@@ -23,8 +38,9 @@ export async function fetchVenues(
     query: {
       sport: params.sport,
       location: params.location.trim() || undefined,
-      maxPrice: params.maxPrice,
-      // Semántica FE: false = no filtra. Solo mandamos el param cuando está activo.
+      // 0 = no filtra (mandar 0 al backend filtraría a precio 0).
+      maxPrice: params.maxPrice > 0 ? params.maxPrice : undefined,
+      // false = no filtra; solo mandamos el param cuando está activo.
       withDeposit: params.withDeposit ? true : undefined,
     },
   });

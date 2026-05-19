@@ -24,18 +24,18 @@ app/
     SearchContext.tsx         Filtros + deporte detectado (estado global)
     SnackbarContext.tsx       Provider global de snackbars (success/error)
   data/
-    venues.ts                 Mock data fuente (MockVenue + MOCK_VENUES + minCourtPrice)
-    bookings.ts               Seed estático + store in-memory de reservas
+    bookings.ts               Seed estático + store in-memory de reservas (mock pendiente)
   services/
-    venues.ts                 fetchVenues, getVenueById (Supabase real)
-    slots.ts                  fetchSlots (mock, pendiente backend)
+    venues.ts                 fetchVenues, getVenueById (Supabase real). Venue = cancha; trae merchant embebido
+    merchants.ts              fetchMerchants (Supabase real). Deriva imageUrl por slug
+    slots.ts                  fetchSlots (Supabase real); flat Slot[] con venue embebido
     bookings.ts               createReservations (real); fetchUserBookings/cancelBooking (mock, pendientes)
     parseSearch.ts            parseSearchQuery (cliente del route handler)
   api/
     parse-search/
       route.ts                POST: infiere filtros del texto vía Claude (server-only)
   hooks/
-    useVenues.ts              Refetch automático al cambiar filtros
+    useMerchants.ts           Fetch list-venues + agrupa por merchant client-side
   lib/
     api.ts                    apiFetch + ApiError + snakeCase params (cliente Supabase Edge)
     format.ts                 formatPrice, formatDateLabel, todayIso, addDays
@@ -45,10 +45,11 @@ app/
     SearchBar.tsx             Input + submit async (Claude parser) + fallback detectSport
     FilterPill.tsx            Pill genérico (3 estados visuales)
     NumberStepper.tsx         Stepper reusable
-    VenueList.tsx             Renderiza loading/empty/list
-    VenueCard.tsx             Link a /venues/[id]
-    SlotBookingPanel.tsx      Multi-select + CTA fijo + modal de confirmación
+    MerchantList.tsx          Renderiza loading/empty/list de complejos
+    MerchantCard.tsx          Card de complejo (link a /merchants/[id]?sport=X)
+    SlotBookingPanel.tsx      Tabs por cancha + N fetchSlots paralelos + CTA fijo + modal
     SlotCard.tsx              Card individual de slot
+    CourtTabs.tsx             Tabs horizontales por cancha (Venue[])
     ConfirmBookingModal.tsx   Bottom sheet de confirmación de reserva
     BookingsList.tsx          Tabs Próximas/Pasadas + fetch en mount
     BookingCard.tsx           Card individual de reserva con variants
@@ -56,9 +57,9 @@ app/
       LocationFilter.tsx
       PriceFilter.tsx
       DateFilter.tsx
-  venues/
-    [venueId]/
-      page.tsx                Server component: fetch + <SlotBookingPanel />
+  merchants/
+    [merchantId]/
+      page.tsx                Server component: fetchVenues filtrado por merchant + <SlotBookingPanel />
   mis-reservas/
     page.tsx                  Server shell; reads `?confirmed=1` y delega a BookingsList
 ```
@@ -91,19 +92,45 @@ Todo el código de formato (`formatPrice`, `formatDateLabel`) es determinístico
 
 ### `data/`
 
-Fuente mock de datos compartida entre servicios. `MockVenue` extiende `Venue` con campos privados (`sport`, `hasDeposit`, `slotDurationMinutes`) que no se exponen al cliente; los servicios los stripean con `toPublicVenue`.
+Solo queda `bookings.ts` con el store in-memory de reservas mock (pendiente migración a `list-user-reservations`). Los mocks de venues/slots se borraron al integrar el backend real.
 
 ### `services/`
 
-Cada función define el **contrato que el backend real va a respetar**. Hoy están mockeadas con `setTimeout` (100–300ms) para que el código consumidor ya esté escrito asumiendo async.
+Cada función habla con Supabase Edge Functions vía `apiFetch` (excepto las funciones aún mockeadas).
 
-- `fetchVenues(params): Promise<Venue[]>` — filtra por sport, location, maxPrice y deposit; ordena por precio.
-- `getVenueById(id): Promise<Venue | null>`
-- `fetchSlots(venueId): Promise<Slot[]>` — genera slots 08:00–22:00 a partir de `slotDurationMinutes` del venue.
+- `fetchMerchants({ sport?, withDeposit? }): Promise<Merchant[]>` — `GET /list-merchants`. Ordena por `minPrice` asc. El service deriva `imageUrl` por slug.
+- `fetchVenues(params): Promise<Venue[]>` — `GET /list-venues`. Filtra por sport (req), location, maxPrice, withDeposit. Devuelve canchas con `merchant` embebido.
+- `getVenueById(id): Promise<Venue | null>` — `GET /get-venue?id=`. 404 → `null`.
+- `fetchSlots(venueId, date?): Promise<Slot[]>` — `GET /list-slots?venue_id&date?`. Devuelve flat array; cada slot trae `venue` embebido (redundante con el listado pero útil).
+- `createReservations({ slotIds }): Promise<Reservation[]>` — `POST /create-reservations-bulk`.
 
-### `hooks/useVenues`
+### `hooks/useMerchants`
 
-Wraps fetch + estado. Patrón `cancelled` flag dentro del effect para evitar race conditions cuando el usuario cambia filtros rápido. Refetchea ante cambio de cualquier filtro (dep array exhaustivo).
+Wrappea `fetchMerchants` + post-filter client-side de `location` (substring sobre `address`) y `maxPrice` (contra `minPrice` de cada merchant). Patrón `cancelled` flag dentro del effect para evitar race conditions cuando el usuario cambia filtros rápido. Refetchea ante cambio de cualquier filtro (dep array exhaustivo).
+
+### Modelo de datos y flujo de navegación
+
+Backend modela 3 niveles que el FE refleja 1-a-1:
+
+- **Merchant** = complejo (ej. "Polideportivo Norte"). Tiene N venues. Datos: nombre, dirección, contactos, `requiresDeposit`.
+- **Venue** = cancha individual (ej. "Paddle #4"). Pertenece a un merchant. Tiene `sport`, `capacity`, `isCovered`, `price` base. Cada venue tiene slots.
+- **Slot** = horario de una venue. Tiene `startTime`/`endTime`, `price`, `status: available | blocked | reserved`.
+
+**Decisión clave**: la home consume `list-merchants` directamente (en lugar de pedir todos los venues y agrupar). El backend ya devuelve `minPrice`, `sports[]` y `venuesCount` calculados, por lo que el FE recibe la lista lista para renderear.
+
+Limitaciones del endpoint que se compensan client-side:
+
+- `list-merchants` solo acepta `sport` y `with_deposit`. Los filtros `location` (substring sobre `merchant.address`) y `maxPrice` (`m.minPrice <= maxPrice`) se aplican **post-fetch** en el hook `useMerchants`.
+- `Merchant` no trae `imageUrl` en el shape backend. El service deriva una URL determinística `https://picsum.photos/seed/${slug}/240/240` en `withImageUrl()`. Cuando backend agregue imagen real, alcanza con borrar el helper.
+
+Flow completo end-to-end:
+
+| Paso | Pantalla | HTTP calls |
+|---|---|---|
+| Search submit | `/` | 1 × `list-merchants?sport=X&with_deposit?=true` |
+| Tap merchant | `/merchants/[id]?sport=X` | 1 × `list-venues?sport=X` (server-side, filtra por `merchant.id` client-side) + N × `list-slots?venue_id=Y` (paralelos, 1 por cancha del merchant) |
+| Confirmar reserva | (modal) | 1 × `create-reservations-bulk` |
+| Redirect a mis reservas | `/mis-reservas` | 1 × `list-user-reservations` (cuando se integre — hoy mock) |
 
 ### Cliente HTTP (`lib/api.ts`)
 
@@ -152,7 +179,9 @@ Los campos que no vinieron del LLM mantienen el default actual del context (`dat
 
 | Ruta | Tipo | Notas |
 |---|---|---|
-| `/` | Client (vía `SearchExperience`) | Home con search + lista |
+| `/` | Client (vía `SearchExperience`) | Home con search + lista de merchants |
+| `/merchants/[merchantId]?sport=X` | Server | Async `params`+`searchParams`. Filtra venues por `merchant.id` y delega a `<SlotBookingPanel />`. Sport inválido o merchant vacío → `notFound()` |
+| `/mis-reservas` | Server shell | Lee `searchParams.confirmed`, pasa `justConfirmed` a `<BookingsList />` client. `BookingsList` fetchea bookings en mount, separa Próximas/Pasadas, dispara snackbar si viene de un confirm y limpia la URL con `router.replace` |
 | `POST /api/parse-search` | Route Handler server | Recibe `{ query, today }`, llama Claude vía AI SDK, devuelve los 4 filtros (nullables) |
 
 ### Endpoints externos (Supabase Edge Functions)
@@ -161,14 +190,13 @@ Base: `${NEXT_PUBLIC_SUPABASE_URL}/functions/v1`. Headers comunes: `apikey` siem
 
 | Endpoint | Estado FE | Notas |
 |---|---|---|
-| `GET /list-venues` | **integrado** | Query: `sport` (req), `location?`, `max_price?`, `with_deposit?` |
+| `GET /list-merchants` | **integrado** | Query: `sport?`, `with_deposit?`. Usado por el home. |
+| `GET /list-venues` | **integrado** | Query: `sport` (req), `location?`, `max_price?`, `with_deposit?`. Usado por merchant detail page (server). |
 | `GET /get-venue?id=<uuid>` | **integrado** | 404 → `null` (capturado vía `ApiError`) |
-| `GET /list-slots?venue_id&date?` | mock | Pendiente backend (court grouping) |
+| `GET /list-slots?venue_id&date?` | **integrado** | Flat `Slot[]`; cada slot trae `venue` embebido |
 | `POST /create-reservations-bulk` | **integrado** | Body `{ slot_ids }` + `X-User-Id`. 409 → snackbar específico |
 | `GET /list-user-reservations?status?&page?&page_size?` | mock | Pendiente contrato de respuesta |
 | `DELETE /cancel-user-reservation?id=<uuid>` | mock | Pendiente contrato de respuesta |
-| `/venues/[venueId]` | Server | `params: Promise<...>` (async), fetchea data y pasa a `<SlotBookingPanel />` |
-| `/mis-reservas` | Server shell | Lee `searchParams.confirmed`, pasa `justConfirmed` a `<BookingsList />` client. `BookingsList` fetchea bookings en mount, separa Próximas/Pasadas, dispara snackbar si viene de un confirm y limpia la URL con `router.replace`. |
 
 ## 6. Design tokens
 

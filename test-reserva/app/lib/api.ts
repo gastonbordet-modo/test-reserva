@@ -1,6 +1,13 @@
-export const API_BASE = process.env.NEXT_PUBLIC_SUPABASE_URL
-  ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1`
-  : "";
+function deriveApiBase(): string {
+  const raw = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+  if (!raw) return "";
+  // Permitimos que la env incluya o no `/functions/v1` (caso típico de copy-paste).
+  const noTrailingSlash = raw.replace(/\/$/, "");
+  const stripped = noTrailingSlash.replace(/\/functions\/v1$/, "");
+  return `${stripped}/functions/v1`;
+}
+
+export const API_BASE = deriveApiBase();
 
 export const ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
 
@@ -46,7 +53,9 @@ export async function apiFetch<T>(
   path: string,
   opts: ApiFetchOptions = {}
 ): Promise<T> {
+  console.log(`API Fetch: ${opts.method ?? "GET"} ${path} with options:`, opts);
   if (!API_BASE || !ANON_KEY) {
+    console.log({ API_BASE, ANON_KEY });
     throw new ApiError(
       "missing_supabase_env",
       0,
@@ -54,6 +63,7 @@ export async function apiFetch<T>(
     );
   }
 
+  console.log(`API Fetch 2: ${opts.method ?? "GET"} ${path} with options:`, opts);
   const url = new URL(`${API_BASE}${path}`);
   if (opts.query) {
     const snake = toSnakeCaseParams(opts.query);
@@ -75,6 +85,7 @@ export async function apiFetch<T>(
     signal: opts.signal,
   });
 
+  console.log(`API Fetch 3: ${opts.method ?? "GET"} ${path} with options:`, opts);
   if (!res.ok) {
     let parsed: unknown = null;
     let code = `${path.replace(/^\//, "")}_${res.status}`;
@@ -88,6 +99,7 @@ export async function apiFetch<T>(
     throw new ApiError(code, res.status, parsed);
   }
 
+  console.log(`API Fetch4 : ${opts.method ?? "GET"} ${path} with options:`, opts);
   if (res.status === 204) return undefined as T;
   return res.json() as Promise<T>;
 }
