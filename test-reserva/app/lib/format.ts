@@ -35,7 +35,7 @@ export function todayIso(): string {
   return `${y}-${m}-${day}`;
 }
 
-function addDays(iso: string, days: number): string {
+export function addDays(iso: string, days: number): string {
   const [y, m, d] = iso.split("-").map(Number);
   const date = new Date(y, m - 1, d);
   date.setDate(date.getDate() + days);

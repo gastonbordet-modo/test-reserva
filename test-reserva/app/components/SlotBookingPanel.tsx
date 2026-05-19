@@ -2,19 +2,25 @@
 
 import { useState } from "react";
 import type { Court } from "../services/slots";
+import { createBooking } from "../services/bookings";
+import { useSearchContext } from "../context/SearchContext";
 import { SlotCard } from "./SlotCard";
 import { CourtTabs } from "./CourtTabs";
 import { formatPrice } from "../lib/format";
 
 type Props = {
+  venueId: string;
   courts: Court[];
 };
 
-export function SlotBookingPanel({ courts }: Props) {
+export function SlotBookingPanel({ venueId, courts }: Props) {
+  const { date } = useSearchContext();
   const [activeCourtId, setActiveCourtId] = useState<string>(
     () => courts[0]?.id ?? ""
   );
   const [selected, setSelected] = useState<Set<string>>(() => new Set());
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   if (courts.length === 0) {
     return (
@@ -40,18 +46,33 @@ export function SlotBookingPanel({ courts }: Props) {
     if (courtId === activeCourtId) return;
     setActiveCourtId(courtId);
     setSelected(new Set());
+    setError(null);
   }
 
   const total = activeCourt.slots
     .filter((s) => selected.has(s.id))
     .reduce((sum, s) => sum + s.price, 0);
 
-  function handleConfirm() {
-    if (selected.size === 0) return;
-    alert(
-      `¡Reservaste ${selected.size} slot${selected.size === 1 ? "" : "s"} en ${activeCourt.name} por $${formatPrice(total)}!`
-    );
-    setSelected(new Set());
+  async function handleConfirm() {
+    if (selected.size === 0 || submitting) return;
+    setSubmitting(true);
+    setError(null);
+    try {
+      const booking = await createBooking({
+        venueId,
+        courtId: activeCourt.id,
+        slotIds: [...selected],
+        date,
+      });
+      alert(
+        `¡Reserva ${booking.id} confirmada en ${activeCourt.name} por $${formatPrice(booking.totalPrice)}!`
+      );
+      setSelected(new Set());
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error al reservar");
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   const showTabs = courts.length > 1;
@@ -103,16 +124,23 @@ export function SlotBookingPanel({ courts }: Props) {
       </div>
 
       <div className="fixed bottom-0 left-0 right-0 bg-paper border-t border-gray-20 p-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
-        <div className="max-w-md mx-auto">
+        <div className="max-w-md mx-auto flex flex-col gap-2">
+          {error && (
+            <p className="text-sm text-system-error" role="alert">
+              {error}
+            </p>
+          )}
           <button
             type="button"
             onClick={handleConfirm}
-            disabled={selected.size === 0}
+            disabled={selected.size === 0 || submitting}
             className="w-full bg-brand text-paper rounded-modo-button py-3 font-semibold shadow-modo hover:bg-brand-dark disabled:bg-gray-20 disabled:text-text-gray disabled:cursor-not-allowed cursor-pointer transition-colors"
           >
-            {selected.size === 0
-              ? "Seleccioná uno o más slots"
-              : `Reservar ${selected.size} ${selected.size === 1 ? "slot" : "slots"} · $${formatPrice(total)}`}
+            {submitting
+              ? "Reservando..."
+              : selected.size === 0
+                ? "Seleccioná uno o más slots"
+                : `Reservar ${selected.size} ${selected.size === 1 ? "slot" : "slots"} · $${formatPrice(total)}`}
           </button>
         </div>
       </div>

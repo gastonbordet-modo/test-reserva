@@ -34,7 +34,7 @@ export default async function VenuePage({
         <p className="text-sm text-text-gray">{venue.address}</p>
       </header>
 
-      <SlotBookingPanel courts={courts} />
+      <SlotBookingPanel venueId={venueId} courts={courts} />
     </main>
   );
 }

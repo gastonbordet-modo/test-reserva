@@ -122,9 +122,13 @@ Hoy reservar una cancha implica coordinar por WhatsApp con cada club: chequear d
 
 ## 9. Dependencias externas
 
-- **MODO Auth Bridge** — provee `auth_token` por header/postMessage. v1 mockeado en `sessionStorage`.
-- **MODO Pay Bridge** — recibe `holdId` + total, devuelve success/failure.
-- **API de venues/slots/bookings** — v1 mockeado, contratos definidos en `app/services/`.
+- **MODO Auth Bridge** — inyecta el JWT en `sessionStorage["modo_auth_token"]`. La app lo lee opaco vía `getAuthToken()` y lo manda como `Authorization: Bearer <token>` en cada request al backend. Nunca lo parseamos; el backend resuelve el usuario. v1 con auto-seed de mock token cuando la app no corre dentro de MODO.
+- **MODO Pay Bridge** — recibe `holdId` + total, devuelve success/failure. Aún no implementado: hoy `createBooking` confirma directo sin pago.
+- **API de venues/slots/bookings** — v1 mockeado, contratos en `app/services/`:
+  - `fetchVenues(params)` / `getVenueById(id)`
+  - `fetchSlots(venueId)` → `Court[]` con slots y ocupación
+  - `createBooking({ venueId, courtId, slotIds, date })` → `Booking`
+  - `fetchUserBookings()` → `Booking[]`
 
 ## 10. Riesgos / preguntas abiertas
 
