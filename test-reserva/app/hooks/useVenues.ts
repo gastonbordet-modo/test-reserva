@@ -5,8 +5,7 @@ import { useSearchContext } from "../context/SearchContext";
 import { fetchVenues, type Venue } from "../services/venues";
 
 export function useVenues(): { venues: Venue[]; loading: boolean } {
-  const { sport, location, people, maxPrice, withDeposit, date } =
-    useSearchContext();
+  const { sport, location, maxPrice, withDeposit, date } = useSearchContext();
   const [venues, setVenues] = useState<Venue[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -20,7 +19,7 @@ export function useVenues(): { venues: Venue[]; loading: boolean } {
     let cancelled = false;
     setLoading(true);
 
-    fetchVenues({ sport, location, people, maxPrice, withDeposit, date }).then(
+    fetchVenues({ sport, location, maxPrice, withDeposit, date }).then(
       (data) => {
         if (cancelled) return;
         setVenues(data);
@@ -31,7 +30,7 @@ export function useVenues(): { venues: Venue[]; loading: boolean } {
     return () => {
       cancelled = true;
     };
-  }, [sport, location, people, maxPrice, withDeposit, date]);
+  }, [sport, location, maxPrice, withDeposit, date]);
 
   return { venues, loading };
 }

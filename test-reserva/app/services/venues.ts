@@ -12,7 +12,6 @@ export type Venue = {
 export type FetchVenuesParams = {
   sport: Sport;
   location: string;
-  people: number;
   maxPrice: number;
   withDeposit: boolean;
   date: string;

@@ -10,7 +10,7 @@ import {
 import { todayIso } from "../lib/format";
 
 export type Sport = "futbol" | "tenis" | "basquet" | "paddle";
-export type FilterId = "location" | "people" | "price" | "date";
+export type FilterId = "location" | "price" | "date";
 
 export const SPORT_LABELS: Record<Sport, string> = {
   futbol: "Fútbol",
@@ -26,8 +26,6 @@ type SearchContextValue = {
   setSport: (v: Sport | null) => void;
   location: string;
   setLocation: (v: string) => void;
-  people: number;
-  setPeople: (updater: (prev: number) => number) => void;
   maxPrice: number;
   setMaxPrice: (updater: (prev: number) => number) => void;
   withDeposit: boolean;
@@ -42,13 +40,12 @@ const SearchContext = createContext<SearchContextValue | null>(null);
 export function SearchProvider({ children }: { children: ReactNode }) {
   const [query, setQuery] = useState("");
   const [sport, setSport] = useState<Sport | null>(null);
-  const [location, setLocationRaw] = useState("");
-  const [people, setPeopleRaw] = useState(2);
+  const [location, setLocationRaw] = useState("CABA");
   const [maxPrice, setMaxPriceRaw] = useState(5000);
   const [withDeposit, setWithDeposit] = useState(false);
   const [date, setDateRaw] = useState("");
   const [appliedFilters, setAppliedFilters] = useState<Set<FilterId>>(
-    () => new Set()
+    () => new Set<FilterId>(["location", "price"])
   );
 
   useEffect(() => {
@@ -76,11 +73,6 @@ export function SearchProvider({ children }: { children: ReactNode }) {
     setApplied("location", value.trim().length > 0);
   }
 
-  function setPeople(updater: (prev: number) => number) {
-    setPeopleRaw(updater);
-    setApplied("people", true);
-  }
-
   function setMaxPrice(updater: (prev: number) => number) {
     setMaxPriceRaw(updater);
     setApplied("price", true);
@@ -104,8 +96,6 @@ export function SearchProvider({ children }: { children: ReactNode }) {
         setSport,
         location,
         setLocation,
-        people,
-        setPeople,
         maxPrice,
         setMaxPrice,
         withDeposit,

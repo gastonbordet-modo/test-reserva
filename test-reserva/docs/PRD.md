@@ -17,7 +17,7 @@ Hoy reservar una cancha implica coordinar por WhatsApp con cada club: chequear d
 
 ## 4. Non-goals v1
 
-- Modificación de fecha, horario o cantidad de personas en una reserva (solo cancelar).
+- Modificación de fecha u horario en una reserva (solo cancelar).
 - Reseñas, rating o comentarios de venues.
 - Geolocalización del usuario (la ubicación se ingresa como texto libre).
 - Procesamiento de pagos (responsabilidad de MODO Pay).
@@ -36,7 +36,7 @@ Hoy reservar una cancha implica coordinar por WhatsApp con cada club: chequear d
 1. Usuario abre la mini-app desde MODO.
 2. Escribe en el buscador (ej: "fútbol palermo").
 3. Sistema autodetecta el deporte y aplica el chip correspondiente.
-4. Usuario ajusta filtros (fecha, ubicación, personas, precio máximo, seña).
+4. Usuario ajusta filtros (fecha, ubicación, precio máximo, seña).
 5. Sistema muestra venues filtrados y ordenados por precio.
 6. Usuario selecciona un venue.
 7. Sistema muestra slots disponibles agrupados por cancha.
@@ -71,13 +71,13 @@ Hoy reservar una cancha implica coordinar por WhatsApp con cada club: chequear d
 | Filtro | Default | Tipo |
 |---|---|---|
 | Fecha | Hoy | Date picker (`min = hoy`) |
-| Ubicación | (vacío) | Texto libre |
-| Personas | 2 | Stepper |
+| Ubicación | CABA | Texto libre |
 | Precio máximo | $5000 | Stepper +$500 |
 | Con seña | false | Toggle |
 
 - Los filtros persisten en `SearchContext` global (sobreviven a navegación).
 - Modificar cualquiera dispara refetch automático de venues.
+- Los filtros con valor por default (Fecha, Ubicación, Precio máximo) se muestran desde el inicio con estilo "aplicado" (check + brand) y su valor en el label, porque ya están participando del filtrado de la lista. El toggle "Con seña" es independiente: arranca en off y sólo cambia cuando el usuario lo activa.
 
 ### RF-3 Lista de venues
 

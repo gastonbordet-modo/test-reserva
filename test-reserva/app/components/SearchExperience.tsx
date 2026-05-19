@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from "react";
 import {
   faLocationDot,
-  faUsers,
   faTag,
   faMoneyBillWave,
   faCalendarDay,
@@ -17,7 +16,6 @@ import { formatPrice, formatDateLabel } from "../lib/format";
 import { SearchBar } from "./SearchBar";
 import { FilterPill } from "./FilterPill";
 import { LocationFilter } from "./filters/LocationFilter";
-import { PeopleFilter } from "./filters/PeopleFilter";
 import { PriceFilter } from "./filters/PriceFilter";
 import { DateFilter } from "./filters/DateFilter";
 import { VenueList } from "./VenueList";
@@ -26,7 +24,6 @@ export function SearchExperience() {
   const {
     sport,
     location,
-    people,
     maxPrice,
     withDeposit,
     toggleDeposit,
@@ -114,19 +111,6 @@ export function SearchExperience() {
               ariaExpanded={openFilter === "location"}
             />
             <FilterPill
-              icon={faUsers}
-              label={
-                appliedFilters.has("people")
-                  ? `${people} ${people === 1 ? "persona" : "personas"}`
-                  : "Personas"
-              }
-              active={appliedFilters.has("people")}
-              showCheckWhenActive
-              open={openFilter === "people"}
-              onClick={() => toggleFilter("people")}
-              ariaExpanded={openFilter === "people"}
-            />
-            <FilterPill
               icon={faTag}
               label={
                 appliedFilters.has("price")
@@ -155,9 +139,6 @@ export function SearchExperience() {
             >
               {openFilter === "location" && (
                 <LocationFilter onEnter={closeFilter} />
-              )}
-              {openFilter === "people" && (
-                <PeopleFilter onEnter={closeFilter} />
               )}
               {openFilter === "price" && <PriceFilter onEnter={closeFilter} />}
               {openFilter === "date" && <DateFilter onEnter={closeFilter} />}

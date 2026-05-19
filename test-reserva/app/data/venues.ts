@@ -27,7 +27,7 @@ export const MOCK_VENUES: MockVenue[] = [
     id: "f1",
     sport: "futbol",
     name: "Cancha El Potrero",
-    address: "Av. Cabildo 1234, Belgrano",
+    address: "Av. Cabildo 1234, Belgrano, CABA",
     hasDeposit: true,
     imageUrl: "https://picsum.photos/seed/f1/240/240",
     courts: [
@@ -58,7 +58,7 @@ export const MOCK_VENUES: MockVenue[] = [
     id: "f2",
     sport: "futbol",
     name: "Complejo La Boca",
-    address: "Brandsen 805, La Boca",
+    address: "Brandsen 805, La Boca, CABA",
     hasDeposit: false,
     imageUrl: "https://picsum.photos/seed/f2/240/240",
     courts: [
@@ -82,7 +82,7 @@ export const MOCK_VENUES: MockVenue[] = [
     id: "f3",
     sport: "futbol",
     name: "Fútbol 5 Palermo",
-    address: "Honduras 4500, Palermo",
+    address: "Honduras 4500, Palermo, CABA",
     hasDeposit: true,
     imageUrl: "https://picsum.photos/seed/f3/240/240",
     courts: [
@@ -99,7 +99,7 @@ export const MOCK_VENUES: MockVenue[] = [
     id: "t1",
     sport: "tenis",
     name: "Club Tenis Norte",
-    address: "Av. Lugones 3500, Belgrano",
+    address: "Av. Lugones 3500, Belgrano, CABA",
     hasDeposit: true,
     imageUrl: "https://picsum.photos/seed/t1/240/240",
     courts: [
@@ -130,7 +130,7 @@ export const MOCK_VENUES: MockVenue[] = [
     id: "t2",
     sport: "tenis",
     name: "Pista Central",
-    address: "Av. del Libertador 2000, Núñez",
+    address: "Av. del Libertador 2000, Núñez, CABA",
     hasDeposit: false,
     imageUrl: "https://picsum.photos/seed/t2/240/240",
     courts: [
@@ -154,7 +154,7 @@ export const MOCK_VENUES: MockVenue[] = [
     id: "b1",
     sport: "basquet",
     name: "Polideportivo Saavedra",
-    address: "Crisólogo Larralde 5300, Saavedra",
+    address: "Crisólogo Larralde 5300, Saavedra, CABA",
     hasDeposit: false,
     imageUrl: "https://picsum.photos/seed/b1/240/240",
     courts: [
@@ -178,7 +178,7 @@ export const MOCK_VENUES: MockVenue[] = [
     id: "b2",
     sport: "basquet",
     name: "Cancha Microcentro",
-    address: "San Martín 600, Microcentro",
+    address: "San Martín 600, Microcentro, CABA",
     hasDeposit: true,
     imageUrl: "https://picsum.photos/seed/b2/240/240",
     courts: [
@@ -195,7 +195,7 @@ export const MOCK_VENUES: MockVenue[] = [
     id: "p1",
     sport: "paddle",
     name: "Paddle Club Recoleta",
-    address: "Vicente López 1900, Recoleta",
+    address: "Vicente López 1900, Recoleta, CABA",
     hasDeposit: true,
     imageUrl: "https://picsum.photos/seed/p1/240/240",
     courts: [
@@ -226,7 +226,7 @@ export const MOCK_VENUES: MockVenue[] = [
     id: "p2",
     sport: "paddle",
     name: "Pista Pádel Sur",
-    address: "Caseros 3000, Boedo",
+    address: "Caseros 3000, Boedo, CABA",
     hasDeposit: false,
     imageUrl: "https://picsum.photos/seed/p2/240/240",
     courts: [
@@ -250,7 +250,7 @@ export const MOCK_VENUES: MockVenue[] = [
     id: "p3",
     sport: "paddle",
     name: "Club Lawn Pádel",
-    address: "Av. Belgrano 4000, Almagro",
+    address: "Av. Belgrano 4000, Almagro, CABA",
     hasDeposit: true,
     imageUrl: "https://picsum.photos/seed/p3/240/240",
     courts: [

@@ -49,7 +49,6 @@ app/
     BookingCard.tsx           Card individual de reserva con variants
     filters/
       LocationFilter.tsx
-      PeopleFilter.tsx
       PriceFilter.tsx
       DateFilter.tsx
   venues/
@@ -68,13 +67,12 @@ Provider en root layout. Mantiene:
 - `query: string` — texto crudo del search bar.
 - `sport: Sport | null` — deporte detectado al submitar (gateway al resto del flow).
 - `date: string` — ISO `YYYY-MM-DD`, default hoy.
-- `location: string`
-- `people: number` (default 2)
+- `location: string` (default `"CABA"`)
 - `maxPrice: number` (default 5000)
 - `withDeposit: boolean`
-- `appliedFilters: Set<FilterId>` — qué filtros muestran estilo "aplicado" (con check).
+- `appliedFilters: Set<FilterId>` — qué filtros muestran estilo "aplicado" (con check). Se siembra con `["location", "price"]` en el initial state y se le agrega `"date"` en el `useEffect` de mount (junto con el seteo de `todayIso()`). Resultado: el usuario ve el home con los tres filtros con defaults ya marcados como aplicados, igual que si los hubiera ingresado a mano.
 
-**Patrón de setters envueltos**: `setLocation`, `setPeople`, `setMaxPrice`, `setDate` actualizan automáticamente `appliedFilters`. El componente nunca tiene que mantener "está aplicado o no" por su cuenta.
+**Patrón de setters envueltos**: `setLocation`, `setMaxPrice`, `setDate` actualizan automáticamente `appliedFilters`. El componente nunca tiene que mantener "está aplicado o no" por su cuenta.
 
 ### Hidratación
 
