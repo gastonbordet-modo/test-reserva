@@ -3,9 +3,10 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Court } from "../services/slots";
-import { createBooking } from "../services/bookings";
+import { createReservations } from "../services/bookings";
 import { useSearchContext } from "../context/SearchContext";
 import { useSnackbar } from "../context/SnackbarContext";
+import { ApiError } from "../lib/api";
 import { SlotCard } from "./SlotCard";
 import { CourtTabs } from "./CourtTabs";
 import { ConfirmBookingModal } from "./ConfirmBookingModal";
@@ -61,16 +62,19 @@ export function SlotBookingPanel({ venueId, venueName, courts }: Props) {
     if (selected.size === 0 || submitting) return;
     setSubmitting(true);
     try {
-      await createBooking({
-        venueId,
-        courtId: activeCourt.id,
-        slotIds: [...selected],
-        date,
-      });
+      await createReservations({ slotIds: [...selected] });
       router.push("/mis-reservas?confirmed=1");
     } catch (err) {
       setModalOpen(false);
-      const message = err instanceof Error ? err.message : "Error al reservar";
+      setSelected(new Set());
+      const message =
+        err instanceof ApiError &&
+        (err.code === "slot_not_available" ||
+          err.code === "slot_already_reserved")
+          ? "Ese turno ya no está disponible"
+          : err instanceof Error
+            ? err.message
+            : "Error al reservar";
       show(message, { variant: "error" });
       setSubmitting(false);
     }

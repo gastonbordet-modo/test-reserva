@@ -1,5 +1,5 @@
 import type { Sport } from "../context/SearchContext";
-import { MOCK_VENUES, minCourtPrice, type MockVenue } from "../data/venues";
+import { ApiError, apiFetch } from "../lib/api";
 
 export type Venue = {
   id: string;
@@ -14,38 +14,27 @@ export type FetchVenuesParams = {
   location: string;
   maxPrice: number;
   withDeposit: boolean;
-  date: string;
 };
-
-function toPublicVenue(v: MockVenue): Venue {
-  return {
-    id: v.id,
-    name: v.name,
-    address: v.address,
-    price: minCourtPrice(v),
-    imageUrl: v.imageUrl,
-  };
-}
 
 export async function fetchVenues(
   params: FetchVenuesParams
 ): Promise<Venue[]> {
-  await new Promise((resolve) => setTimeout(resolve, 300));
-
-  const locationQuery = params.location.trim().toLowerCase();
-
-  return MOCK_VENUES.filter((v) => v.sport === params.sport)
-    .filter((v) => minCourtPrice(v) <= params.maxPrice)
-    .filter((v) =>
-      locationQuery ? v.address.toLowerCase().includes(locationQuery) : true
-    )
-    .filter((v) => (params.withDeposit ? v.hasDeposit : true))
-    .map(toPublicVenue)
-    .sort((a, b) => a.price - b.price);
+  return apiFetch<Venue[]>("/list-venues", {
+    query: {
+      sport: params.sport,
+      location: params.location.trim() || undefined,
+      maxPrice: params.maxPrice,
+      // Semántica FE: false = no filtra. Solo mandamos el param cuando está activo.
+      withDeposit: params.withDeposit ? true : undefined,
+    },
+  });
 }
 
 export async function getVenueById(id: string): Promise<Venue | null> {
-  await new Promise((resolve) => setTimeout(resolve, 100));
-  const v = MOCK_VENUES.find((mv) => mv.id === id);
-  return v ? toPublicVenue(v) : null;
+  try {
+    return await apiFetch<Venue>("/get-venue", { query: { id } });
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 404) return null;
+    throw err;
+  }
 }
