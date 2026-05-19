@@ -1,16 +1,31 @@
 "use client";
 
 import { useState } from "react";
-import type { Slot } from "../services/slots";
+import type { Court } from "../services/slots";
 import { SlotCard } from "./SlotCard";
+import { CourtTabs } from "./CourtTabs";
 import { formatPrice } from "../lib/format";
 
 type Props = {
-  slots: Slot[];
+  courts: Court[];
 };
 
-export function SlotBookingPanel({ slots }: Props) {
+export function SlotBookingPanel({ courts }: Props) {
+  const [activeCourtId, setActiveCourtId] = useState<string>(
+    () => courts[0]?.id ?? ""
+  );
   const [selected, setSelected] = useState<Set<string>>(() => new Set());
+
+  if (courts.length === 0) {
+    return (
+      <p className="text-sm text-text-gray mt-4">
+        No hay canchas disponibles para este venue.
+      </p>
+    );
+  }
+
+  const activeCourt =
+    courts.find((c) => c.id === activeCourtId) ?? courts[0];
 
   function toggle(id: string) {
     setSelected((prev) => {
@@ -21,35 +36,70 @@ export function SlotBookingPanel({ slots }: Props) {
     });
   }
 
-  const total = slots
+  function handleCourtChange(courtId: string) {
+    if (courtId === activeCourtId) return;
+    setActiveCourtId(courtId);
+    setSelected(new Set());
+  }
+
+  const total = activeCourt.slots
     .filter((s) => selected.has(s.id))
     .reduce((sum, s) => sum + s.price, 0);
 
   function handleConfirm() {
     if (selected.size === 0) return;
     alert(
-      `¡Reservaste ${selected.size} slot${selected.size === 1 ? "" : "s"} por $${formatPrice(total)}!`
+      `¡Reservaste ${selected.size} slot${selected.size === 1 ? "" : "s"} en ${activeCourt.name} por $${formatPrice(total)}!`
     );
     setSelected(new Set());
   }
 
+  const showTabs = courts.length > 1;
+
   return (
     <>
-      <div className="flex flex-col gap-2 mt-2">
-        {slots.length === 0 ? (
-          <p className="text-sm text-text-gray">
-            No hay horarios disponibles para este venue.
-          </p>
-        ) : (
-          slots.map((slot) => (
-            <SlotCard
-              key={slot.id}
-              slot={slot}
-              selected={selected.has(slot.id)}
-              onToggle={() => toggle(slot.id)}
-            />
-          ))
-        )}
+      {showTabs && (
+        <CourtTabs
+          courts={courts}
+          activeCourtId={activeCourt.id}
+          onChange={handleCourtChange}
+        />
+      )}
+
+      <div
+        id={`court-panel-${activeCourt.id}`}
+        role="tabpanel"
+        aria-labelledby={showTabs ? `court-tab-${activeCourt.id}` : undefined}
+        className="mt-3 sm:mt-4"
+      >
+        <div className="flex items-baseline justify-between gap-3 mb-2">
+          <div className="min-w-0">
+            <h2 className="text-base sm:text-lg font-semibold text-text-light truncate">
+              {activeCourt.name}
+            </h2>
+            <p className="text-xs sm:text-sm text-text-gray truncate">
+              {activeCourt.description}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-2">
+          {activeCourt.slots.length === 0 ? (
+            <p className="text-sm text-text-gray">
+              No hay horarios para esta cancha.
+            </p>
+          ) : (
+            activeCourt.slots.map((slot) => (
+              <SlotCard
+                key={slot.id}
+                slot={slot}
+                selected={selected.has(slot.id)}
+                disabled={slot.occupied}
+                onToggle={() => toggle(slot.id)}
+              />
+            ))
+          )}
+        </div>
       </div>
 
       <div className="fixed bottom-0 left-0 right-0 bg-paper border-t border-gray-20 p-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">

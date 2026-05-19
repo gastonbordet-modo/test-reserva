@@ -16,7 +16,7 @@ export default async function VenuePage({
   if (!venue) {
     notFound();
   }
-  const slots = await fetchSlots(venueId);
+  const courts = await fetchSlots(venueId);
 
   return (
     <main className="flex-1 flex flex-col w-full max-w-md mx-auto px-4 pb-32">
@@ -28,11 +28,13 @@ export default async function VenuePage({
           <FontAwesomeIcon icon={faArrowLeft} />
           <span>Volver</span>
         </Link>
-        <h1 className="text-2xl font-bold text-text-light">{venue.name}</h1>
+        <h1 className="text-xl sm:text-2xl font-bold text-text-light">
+          {venue.name}
+        </h1>
         <p className="text-sm text-text-gray">{venue.address}</p>
       </header>
 
-      <SlotBookingPanel slots={slots} />
+      <SlotBookingPanel courts={courts} />
     </main>
   );
 }

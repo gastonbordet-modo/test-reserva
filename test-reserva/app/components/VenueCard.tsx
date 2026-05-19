@@ -23,8 +23,11 @@ export function VenueCard({ venue }: Props) {
       <div className="flex flex-col gap-1 flex-1 min-w-0">
         <h3 className="font-bold text-text-light truncate">{venue.name}</h3>
         <p className="text-sm text-text-gray truncate">{venue.address}</p>
-        <p className="text-base font-semibold text-brand mt-auto">
-          ${formatPrice(venue.price)}
+        <p className="text-sm text-text-gray mt-auto">
+          Reservas desde{" "}
+          <span className="text-base font-semibold text-brand">
+            ${formatPrice(venue.price)}
+          </span>
         </p>
       </div>
     </Link>

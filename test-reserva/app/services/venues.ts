@@ -1,5 +1,5 @@
 import type { Sport } from "../context/SearchContext";
-import { MOCK_VENUES, type MockVenue } from "../data/venues";
+import { MOCK_VENUES, minCourtPrice, type MockVenue } from "../data/venues";
 
 export type Venue = {
   id: string;
@@ -19,31 +19,30 @@ export type FetchVenuesParams = {
 };
 
 function toPublicVenue(v: MockVenue): Venue {
-  const {
-    sport: _sport,
-    hasDeposit: _hasDeposit,
-    slotDurationMinutes: _slotDurationMinutes,
-    ...venue
-  } = v;
-  return venue;
+  return {
+    id: v.id,
+    name: v.name,
+    address: v.address,
+    price: minCourtPrice(v),
+    imageUrl: v.imageUrl,
+  };
 }
 
 export async function fetchVenues(
   params: FetchVenuesParams
 ): Promise<Venue[]> {
-  // simulated network latency
   await new Promise((resolve) => setTimeout(resolve, 300));
 
   const locationQuery = params.location.trim().toLowerCase();
 
   return MOCK_VENUES.filter((v) => v.sport === params.sport)
-    .filter((v) => v.price <= params.maxPrice)
+    .filter((v) => minCourtPrice(v) <= params.maxPrice)
     .filter((v) =>
       locationQuery ? v.address.toLowerCase().includes(locationQuery) : true
     )
     .filter((v) => (params.withDeposit ? v.hasDeposit : true))
-    .sort((a, b) => a.price - b.price)
-    .map(toPublicVenue);
+    .map(toPublicVenue)
+    .sort((a, b) => a.price - b.price);
 }
 
 export async function getVenueById(id: string): Promise<Venue | null> {
