@@ -45,6 +45,8 @@ app/
     SlotBookingPanel.tsx      Multi-select + CTA fijo + modal de confirmación
     SlotCard.tsx              Card individual de slot
     ConfirmBookingModal.tsx   Bottom sheet de confirmación de reserva
+    BookingsList.tsx          Tabs Próximas/Pasadas + fetch en mount
+    BookingCard.tsx           Card individual de reserva con variants
     filters/
       LocationFilter.tsx
       PeopleFilter.tsx
@@ -53,6 +55,8 @@ app/
   venues/
     [venueId]/
       page.tsx                Server component: fetch + <SlotBookingPanel />
+  mis-reservas/
+    page.tsx                  Server shell; reads `?confirmed=1` y delega a BookingsList
 ```
 
 ## 3. Estado global
@@ -119,7 +123,7 @@ El bridge real de MODO va a inyectar un JWT en `sessionStorage["modo_auth_token"
 |---|---|---|
 | `/` | Client (vía `SearchExperience`) | Home con search + lista |
 | `/venues/[venueId]` | Server | `params: Promise<...>` (async), fetchea data y pasa a `<SlotBookingPanel />` |
-| `/mis-reservas` | **Pendiente** | Server + `<BookingsList />` client |
+| `/mis-reservas` | Server shell | Lee `searchParams.confirmed`, pasa `justConfirmed` a `<BookingsList />` client. `BookingsList` fetchea bookings en mount, separa Próximas/Pasadas, dispara snackbar si viene de un confirm y limpia la URL con `router.replace`. |
 
 ## 6. Design tokens
 
@@ -144,10 +148,9 @@ Animaciones custom: `filter-panel-enter` para los panels que se montan al abrir 
 
 ## 8. Pendiente / siguiente iteración
 
-- **`/mis-reservas`** consume `fetchUserBookings()` (servicio ya implementado). Falta UI + tabs Próximas/Pasadas + entry point en `AppHeader`.
-- **`AppHeader`** global con link a `/mis-reservas`.
+- **AppHeader global**: hoy solo el home tiene link a `/mis-reservas` (top-right). Si crece la cantidad de pantallas con navegación principal, abstraer a un header global.
 - **Auth bridge real**: hoy `getAuthToken()` auto-seedea mock; cuando estemos embebidos en MODO el token ya estará en `sessionStorage`.
 - **MODO Pay bridge** real con manejo de success/failure/timeout. Hoy `createBooking` confirma directo sin pago.
 - **Server-side hold** con expiración a 5min y liberación on-timeout.
-- **Cancelación de reservas** + reembolso vía MODO.
-- **Redirect post-booking**: hoy `SlotBookingPanel.handleConfirm` muestra un `alert` al confirmar. Cuando exista `/mis-reservas` reemplazar por `router.push("/mis-reservas")`.
+- **Cancelación de reservas** desde `BookingCard` en tab Próximas + reembolso vía MODO. La card ya tiene el espacio visual reservado; falta acción + servicio `cancelBooking`.
+- **Contador en tabs de reservas** (`Próximas (3)` / `Pasadas (7)`).

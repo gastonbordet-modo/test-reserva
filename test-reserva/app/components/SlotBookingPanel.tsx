@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import type { Court } from "../services/slots";
 import { createBooking } from "../services/bookings";
 import { useSearchContext } from "../context/SearchContext";
@@ -17,6 +18,7 @@ type Props = {
 };
 
 export function SlotBookingPanel({ venueId, venueName, courts }: Props) {
+  const router = useRouter();
   const { date } = useSearchContext();
   const { show } = useSnackbar();
   const [activeCourtId, setActiveCourtId] = useState<string>(
@@ -59,23 +61,17 @@ export function SlotBookingPanel({ venueId, venueName, courts }: Props) {
     if (selected.size === 0 || submitting) return;
     setSubmitting(true);
     try {
-      const booking = await createBooking({
+      await createBooking({
         venueId,
         courtId: activeCourt.id,
         slotIds: [...selected],
         date,
       });
-      setModalOpen(false);
-      setSelected(new Set());
-      show(
-        `¡Reserva confirmada en ${booking.court.name} por $${formatPrice(booking.totalPrice)}!`,
-        { variant: "success" }
-      );
+      router.push("/mis-reservas?confirmed=1");
     } catch (err) {
       setModalOpen(false);
       const message = err instanceof Error ? err.message : "Error al reservar";
       show(message, { variant: "error" });
-    } finally {
       setSubmitting(false);
     }
   }

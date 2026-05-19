@@ -99,14 +99,24 @@ Hoy reservar una cancha implica coordinar por WhatsApp con cada club: chequear d
   - Badge informativo "Sin seña" (v1 todas las reservas son sin seña, tanto en mock como en backend real).
 - Acciones del modal: "Cancelar" (cierra) y "Confirmar".
 - Al confirmar:
-  - **v1 mock**: dispara `createBooking` directo. Success → modal se cierra + **snackbar verde** "¡Reserva confirmada!" (3s). Error → modal se cierra + **snackbar rojo** con el mensaje (8s, dismissible).
-  - **v1 final con backend**: dispara hold de 5min y bridge a MODO Pay. Success → redirect a `/mis-reservas`. Failure/timeout → liberar hold + snackbar de error.
+  - **v1 mock**: dispara `createBooking` directo. Success → `router.push("/mis-reservas?confirmed=1")`; el snackbar verde "¡Reserva confirmada!" se dispara desde el destino (que limpia el query param con `router.replace`). Error → modal se cierra + **snackbar rojo** con el mensaje (8s, dismissible) y la selección se mantiene para retry.
+  - **v1 final con backend**: dispara hold de 5min y bridge a MODO Pay. Success → mismo redirect a `/mis-reservas`. Failure/timeout → liberar hold + snackbar de error.
 
 ### RF-6 Mis reservas
 
 - Token obtenido del bridge MODO (mock en sessionStorage para v1).
-- Dos tabs: **Próximas** (default, estilo brand activo) y **Pasadas** (estilo gris muted).
-- Card por reserva: foto del venue, nombre, fecha, slots, total.
+- Entry point: link "Mis reservas" arriba a la derecha del home.
+- Dos tabs: **Próximas** (default) y **Pasadas**.
+- Clasificación:
+  - **Próximas** = `status === "confirmed" && date >= hoy`.
+  - **Pasadas** = todo lo demás (vencidas + canceladas de cualquier fecha).
+- Sort: Próximas asc (más próxima primero), Pasadas desc (más reciente primero).
+- Card por reserva: foto, nombre del venue, cancha (`name · description`), fecha, rango horario + cantidad de slots, total.
+- Estilos por estado de la card:
+  - Próximas: color completo, total en brand.
+  - Pasadas no canceladas: `opacity-60`, imagen en `grayscale`, total muted.
+  - Canceladas (siempre van a Pasadas): badge "Cancelada" en `system-error`.
+- Empty states: "No tenés reservas próximas" con link al home / "Todavía no tenés reservas pasadas".
 
 ### RF-7 Cancelación
 

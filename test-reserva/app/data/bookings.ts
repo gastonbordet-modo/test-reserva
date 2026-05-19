@@ -138,6 +138,27 @@ function buildSeed(): Booking[] {
       status: "confirmed",
       createdAt: new Date().toISOString(),
     },
+    {
+      id: "bk-seed-6",
+      venue: {
+        id: "p2",
+        name: "Pista Pádel Sur",
+        address: "Caseros 3000, Boedo",
+        imageUrl: "https://picsum.photos/seed/p2/240/240",
+      },
+      court: {
+        id: "p2-c1",
+        name: "Cancha A",
+        description: "Cristal",
+      },
+      slots: [
+        { id: "p2-c1-9", startTime: "17:00", endTime: "18:00", price: 4500 },
+      ],
+      date: addDays(today, 4),
+      totalPrice: 4500,
+      status: "cancelled",
+      createdAt: new Date(Date.now() - 2 * 24 * 3600 * 1000).toISOString(),
+    },
   ];
 }
 
