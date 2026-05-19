@@ -1,9 +1,16 @@
 "use client";
 
-import { createContext, useContext, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  type ReactNode,
+} from "react";
+import { todayIso } from "../lib/format";
 
 export type Sport = "futbol" | "tenis" | "basquet" | "paddle";
-export type FilterId = "location" | "people" | "price";
+export type FilterId = "location" | "people" | "price" | "date";
 
 export const SPORT_LABELS: Record<Sport, string> = {
   futbol: "Fútbol",
@@ -25,6 +32,8 @@ type SearchContextValue = {
   setMaxPrice: (updater: (prev: number) => number) => void;
   withDeposit: boolean;
   toggleDeposit: () => void;
+  date: string;
+  setDate: (v: string) => void;
   appliedFilters: Set<FilterId>;
 };
 
@@ -37,9 +46,20 @@ export function SearchProvider({ children }: { children: ReactNode }) {
   const [people, setPeopleRaw] = useState(2);
   const [maxPrice, setMaxPriceRaw] = useState(5000);
   const [withDeposit, setWithDeposit] = useState(false);
+  const [date, setDateRaw] = useState("");
   const [appliedFilters, setAppliedFilters] = useState<Set<FilterId>>(
     () => new Set()
   );
+
+  useEffect(() => {
+    setDateRaw(todayIso());
+    setAppliedFilters((prev) => {
+      if (prev.has("date")) return prev;
+      const next = new Set(prev);
+      next.add("date");
+      return next;
+    });
+  }, []);
 
   function setApplied(id: FilterId, applied: boolean) {
     setAppliedFilters((prev) => {
@@ -70,6 +90,11 @@ export function SearchProvider({ children }: { children: ReactNode }) {
     setWithDeposit((prev) => !prev);
   }
 
+  function setDate(value: string) {
+    setDateRaw(value);
+    setApplied("date", value.length > 0);
+  }
+
   return (
     <SearchContext.Provider
       value={{
@@ -85,6 +110,8 @@ export function SearchProvider({ children }: { children: ReactNode }) {
         setMaxPrice,
         withDeposit,
         toggleDeposit,
+        date,
+        setDate,
         appliedFilters,
       }}
     >

@@ -15,6 +15,7 @@ export type FetchVenuesParams = {
   people: number;
   maxPrice: number;
   withDeposit: boolean;
+  date: string;
 };
 
 function toPublicVenue(v: MockVenue): Venue {

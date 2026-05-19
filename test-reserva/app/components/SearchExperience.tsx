@@ -6,18 +6,20 @@ import {
   faUsers,
   faTag,
   faMoneyBillWave,
+  faCalendarDay,
 } from "@fortawesome/free-solid-svg-icons";
 import {
   useSearchContext,
   SPORT_LABELS,
   type FilterId,
 } from "../context/SearchContext";
-import { formatPrice } from "../lib/format";
+import { formatPrice, formatDateLabel } from "../lib/format";
 import { SearchBar } from "./SearchBar";
 import { FilterPill } from "./FilterPill";
 import { LocationFilter } from "./filters/LocationFilter";
 import { PeopleFilter } from "./filters/PeopleFilter";
 import { PriceFilter } from "./filters/PriceFilter";
+import { DateFilter } from "./filters/DateFilter";
 import { VenueList } from "./VenueList";
 
 export function SearchExperience() {
@@ -28,6 +30,7 @@ export function SearchExperience() {
     maxPrice,
     withDeposit,
     toggleDeposit,
+    date,
     appliedFilters,
   } = useSearchContext();
 
@@ -93,6 +96,15 @@ export function SearchExperience() {
             )}
 
             <FilterPill
+              icon={faCalendarDay}
+              label={formatDateLabel(date)}
+              active={appliedFilters.has("date")}
+              showCheckWhenActive
+              open={openFilter === "date"}
+              onClick={() => toggleFilter("date")}
+              ariaExpanded={openFilter === "date"}
+            />
+            <FilterPill
               icon={faLocationDot}
               label={appliedFilters.has("location") ? location : "Ubicación"}
               active={appliedFilters.has("location")}
@@ -148,6 +160,7 @@ export function SearchExperience() {
                 <PeopleFilter onEnter={closeFilter} />
               )}
               {openFilter === "price" && <PriceFilter onEnter={closeFilter} />}
+              {openFilter === "date" && <DateFilter onEnter={closeFilter} />}
             </div>
           )}
         </div>
