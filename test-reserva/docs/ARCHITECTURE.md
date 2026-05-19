@@ -158,7 +158,7 @@ El bridge real de MODO va a inyectar un `userId` opaco en `sessionStorage["modo_
   - `fetchUserBookings()`: **mock** todavía. Lee del store mutable en `app/data/bookings.ts`. Pendiente migrar a `GET /list-user-reservations` cuando llegue el contrato de respuesta.
   - `cancelBooking(bookingId)`: **mock**. Soft-delete en el store. Pendiente migrar a `DELETE /cancel-user-reservation?id=<uuid>`.
 - **`app/data/bookings.ts`** sigue funcionando como store de mock con seed (5 reservas, mix pasadas/futuras/canceladas) hasta que ambos endpoints de "Mis reservas" estén disponibles.
-- **Gap de transición**: con `createReservations` real pero `fetchUserBookings` mock, al confirmar una reserva nueva el usuario ve el snackbar de éxito pero la reserva **no aparece** en `/mis-reservas` hasta que el endpoint de listado también se migre. Limitación esperada de fase 1.
+- **Cacheo transicional**: tras un `createReservations` exitoso, `SlotBookingPanel` llama a `recordReservationsAsMockBooking(reservations, snapshot)` que arma un `Booking` con la info que el FE ya tenía (merchant, venue, slots seleccionados, fecha) y lo agrega al store mock. Así la reserva nueva aparece inmediatamente en `/mis-reservas` aunque `fetchUserBookings` siga sirviendo del store local. El helper se borra cuando el listado consuma `list-user-reservations`. Recordá que el store se resetea al recargar la página: lo que reserves persiste solo durante la vida del bundle JS.
 
 ### Inferencia de filtros (Claude)
 

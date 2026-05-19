@@ -4,7 +4,10 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Venue } from "../services/venues";
 import { fetchSlots, type Slot } from "../services/slots";
-import { createReservations } from "../services/bookings";
+import {
+  createReservations,
+  recordReservationsAsMockBooking,
+} from "../services/bookings";
 import { useSearchContext } from "../context/SearchContext";
 import { useSnackbar } from "../context/SnackbarContext";
 import { ApiError } from "../lib/api";
@@ -98,7 +101,24 @@ export function SlotBookingPanel({ merchantName, venues }: Props) {
     if (selected.size === 0 || submitting) return;
     setSubmitting(true);
     try {
-      await createReservations({ slotIds: [...selected] });
+      const reservations = await createReservations({
+        slotIds: [...selected],
+      });
+      recordReservationsAsMockBooking(reservations, {
+        merchantName,
+        venueId: activeVenue.id,
+        venueName: activeVenue.name,
+        venueAddress: activeVenue.address,
+        venueImageUrl: activeVenue.imageUrl,
+        venueDescription: `${activeVenue.isCovered ? "Techada" : "Al aire libre"} · ${activeVenue.capacity} jugadores`,
+        date,
+        slots: selectedSlots.map((s) => ({
+          id: s.id,
+          startTime: s.startTime,
+          endTime: s.endTime,
+          price: s.price,
+        })),
+      });
       router.push("/mis-reservas?confirmed=1");
     } catch (err) {
       setModalOpen(false);

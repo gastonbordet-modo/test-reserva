@@ -1,7 +1,9 @@
 import {
+  addBooking,
   getAllBookings,
   updateBookingStatus,
   type Booking,
+  type BookingSlot,
 } from "../data/bookings";
 import { apiFetch } from "../lib/api";
 import { getUserId } from "../lib/auth";
@@ -49,6 +51,53 @@ export async function createReservations(
     }
   );
   return data.reservations;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Helper transicional: mientras `list-user-reservations` siga mockeado, las
+// reservas que el user crea se cachean también en el store mock para que
+// aparezcan en /mis-reservas sin recargar nada del backend. Se borra cuando
+// `fetchUserBookings` consuma el endpoint real.
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type ReservationSnapshot = {
+  merchantName: string;
+  venueId: string;
+  venueName: string;
+  venueAddress: string;
+  venueImageUrl: string;
+  venueDescription: string;
+  date: string;
+  slots: BookingSlot[];
+};
+
+export function recordReservationsAsMockBooking(
+  reservations: Reservation[],
+  snapshot: ReservationSnapshot
+): Booking | null {
+  if (reservations.length === 0) return null;
+  const totalPrice = snapshot.slots.reduce((sum, s) => sum + s.price, 0);
+  const booking: Booking = {
+    id: reservations[0].id,
+    venue: {
+      id: snapshot.venueId,
+      name: snapshot.merchantName,
+      address: snapshot.venueAddress,
+      imageUrl: snapshot.venueImageUrl,
+    },
+    court: {
+      id: snapshot.venueId,
+      name: snapshot.venueName,
+      description: snapshot.venueDescription,
+    },
+    slots: snapshot.slots,
+    date: snapshot.date,
+    totalPrice,
+    status: "confirmed",
+    createdAt: new Date().toISOString(),
+  };
+  addBooking(booking);
+  return booking;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
